@@ -2,7 +2,7 @@ from flask import Flask, render_template, request, jsonify
 import os
 from dotenv import load_dotenv
 import openai
-from elevenlabs import ElevenLabs
+from elevenlabs import generate, set_api_key
 import tempfile
 
 load_dotenv()
