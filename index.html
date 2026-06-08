@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>B.CORP Engineering Agent v1.1</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+       .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+       .subtitle {
+            color: #666;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        #question {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            font-size: 16px;
+            margin-bottom: 15px;
+            font-family: inherit;
+        }
+       .buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        button {
+            flex: 1;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        #micBtn {
+            background: #667eea;
+            color: white;
+        }
+        #micBtn.recording {
+            background: #e74c3c;
+            animation: pulse 1s infinite;
+        }
+        #sendBtn {
+            background: #2ecc71;
+            color: white;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        #answer {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            min-height: 100px;
+            margin-top: 20px;
+            display: none;
+        }
+        #answer.show {
+            display: block;
+        }
+        audio {
+            width: 100%;
+            margin-top: 15px;
+        }
+       .loading {
+            color: #667eea;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>B.CORP Engineering Agent</h1>
+        <p class="subtitle">v1.1 - Voice + Text AI Assistant</p>
+
+        <textarea id="question" rows="3" placeholder="Ask me anything about engineering..."></textarea>
+
+        <div class="buttons">
+            <button id="micBtn">🎤 Hold to Talk</button>
+            <button id="sendBtn">Send</button>
+        </div>
+
+        <div id="answer"></div>
+    </div>
+
+    <script>
+        const questionInput = document.getElementById('question');
+        const micBtn = document.getElementById('micBtn');
+        const sendBtn = document.getElementById('sendBtn');
+        const answerDiv = document.getElementById('answer');
+
+        // Speech Recognition
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        let recognition;
+
+        if (SpeechRecognition) {
+            recognition = new SpeechRecognition();
+            recognition.continuous = false;
+            recognition.lang = 'en-US';
+
+            micBtn.addEventListener('mousedown', () => {
+                recognition.start();
+                micBtn.classList.add('recording');
+                micBtn.textContent = '🎙️ Listening...';
+            });
+
+            micBtn.addEventListener('mouseup', () => {
+                recognition.stop();
+                micBtn.classList.remove('recording');
+                micBtn.textContent = '🎤 Hold to Talk';
+            });
+
+            recognition.onresult = (event) => {
+                questionInput.value = event.results[0][0].transcript;
+            };
+        } else {
+            micBtn.style.display = 'none';
+        }
+
+        // Send question
+        async function askQuestion() {
+            const question = questionInput.value.trim();
+            if (!question) return;
+
+            sendBtn.disabled = true;
+            answerDiv.classList.add('show');
+            answerDiv.innerHTML = '<div class="loading">Thinking...</div>';
+
+            try {
+                const res = await fetch('/ask', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({question})
+                });
+
+                const data = await res.json();
+
+                if (data.error) {
+                    answerDiv.innerHTML = `Error: ${data.error}`;
+                } else {
+                    answerDiv.innerHTML = `
+                        <strong>Answer:</strong><br>${data.answer}
+                        ${data.audio_url? `<audio controls autoplay src="${data.audio_url}"></audio>` : ''}
+                    `;
+                }
+            } catch (e) {
+                answerDiv.innerHTML = `Error: ${e.message}`;
+            }
+
+            sendBtn.disabled = false;
+        }
+
+        sendBtn.addEventListener('click', askQuestion);
+        questionInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' &&!e.shiftKey) {
+                e.preventDefault();
+                askQuestion();
+            }
+        });
+    </script>
+</body>
+</html>
