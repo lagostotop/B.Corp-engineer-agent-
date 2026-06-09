@@ -14,7 +14,9 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
 
 client = openai.OpenAI(api_key=OPENAI_API_KEY)
-eleven lab 
+from elevenlabs import generate, set_api_key
+
+set_api_key(os.getenv("ELEVENLABS_API_KEY"))
 
 @app.route("/")
 def index():
