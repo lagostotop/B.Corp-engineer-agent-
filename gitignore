@@ -1,9 +1,23 @@
+# Secrets - NEVER commit
 .env
+.env.local
+config.py  # if you ever put keys inside. Now it reads Render env vars so safe
+
+# Python
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
-*.mp3
-.DS_Store
 .venv/
 venv/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# b.corp temp files - Render /tmp folder
+/tmp/
+/tmp/*
+
+# Local test audio only - Render uses /tmp so this won’t affect it
+static/audio/*.mp3
