@@ -1,6 +1,5 @@
 Flask==3.0.3
 gunicorn==22.0.0
 openai==1.40.0
-elevenlabs==0.2.27
+elevenlabs==1.45.0
 supabase==2.7.0
-python-dotenv==1.0.1
