@@ -14,9 +14,9 @@ os.makedirs(AUDIO_DIR, exist_ok=True)
 # Configure Groq - FREE, no billing
 client = Groq(api_key=config.GROQ_API_KEY)
 
-@app.route("/")
-def index():
-    return render_template("index.html")
+@app.route('/')
+def home():
+    return render_template('index.html')  
 
 @app.route("/ask", methods=["POST"])
 def ask():
