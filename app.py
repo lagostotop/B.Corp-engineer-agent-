@@ -27,7 +27,7 @@ def ask():
         if not user_question:
             return jsonify({"error": "No question provided"}), 400
 
-        prompt = f"You are B.CORP Engineering Agent for Nigeria. Provide clear, accurate, technical explanations for engineers. Use professional English. Max 6 sentences.\n\nQuestion: {user_question}"
+        prompt = f"You are B.CORP Universe Tech AI. Provide clear, accurate, technical explanations for engineers. Use professional english .\n\nQuestion: {user_question}"
 
         # Groq call instead of Gemini
         chat_completion = client.chat.completions.create(
