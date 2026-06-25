@@ -27,7 +27,7 @@ def ask():
         if not user_question:
             return jsonify({"error": "No question provided"}), 400
 
-        prompt = f"You are B.CORP Universe Tech AI. Provide clear, accurate, technical explanations for engineers. Use professional english .\n\nQuestion: {user_question}"
+        prompt = f"You are BCorp Tech AI. Provide clear, accurate, technical explanations for engineers. Use professional english .\n\nQuestion: {user_question}"
 
         # Groq call instead of Gemini
         chat_completion = client.chat.completions.create(
@@ -35,6 +35,7 @@ def ask():
             model="llama-3.3-70b-versatile",
             max_tokens=500,
             temperature=0.3
+            stream=True 
         )
         answer = chat_completion.choices[0].message.content
 
