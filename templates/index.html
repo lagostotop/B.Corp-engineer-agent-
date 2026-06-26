@@ -183,3 +183,85 @@
     </script>
 </body>
   </html>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script>
+let memory = JSON.parse(localStorage.getItem('brain_memory')) || [];
+
+function addMessage(role, text) {
+    const div = document.createElement('div');
+    div.className = role;
+    div.innerHTML = marked.parse(text);
+    document.getElementById('chat').appendChild(div);
+    return div;
+}
+
+function addCopyButtons() {
+    document.querySelectorAll('pre code').forEach(block => {
+        if (block.parentElement.querySelector('.copy-btn')) return;
+        let btn = document.createElement('button');
+        btn.innerText = 'Copy';
+        btn.className = 'copy-btn';
+        btn.style = 'position:absolute; top:5px; right:5px; background:#333; color:white; border:none; padding:3px 8px; cursor:pointer; border-radius:4px;';
+        btn.onclick = () => {
+            navigator.clipboard.writeText(block.innerText);
+            btn.innerText = 'Copied!';
+            setTimeout(() => btn.innerText = 'Copy', 2000);
+        };
+        block.parentElement.style.position = 'relative';
+        block.parentElement.style.background = '#1e1e1e';
+        block.parentElement.style.padding = '10px';
+        block.parentElement.appendChild(btn);
+    });
+}
+
+function playAudio(url) {
+    const audio = new Audio(url);
+    audio.play();
+}
+
+async function askBrain(question) {
+    addMessage('user', question);
+    memory.push({role: 'user', content: question});
+
+    const botBox = addMessage('bot', '');
+    let fullAnswer = '';
+
+    const response = await fetch('/ask', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({question: question, memory: memory})
+    });
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+
+    while (true) {
+        const {done, value} = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value);
+        const lines = chunk.split('\n');
+
+        for (const line of lines) {
+            if (line.startsWith('data: ')) {
+                const text = line.replace('data: ', '');
+
+                if (text === '[DONE]') {
+                    memory.push({role: 'assistant', content: fullAnswer});
+                    if (memory.length > 20) memory = memory.slice(-20);
+                    localStorage.setItem('brain_memory', JSON.stringify(memory));
+                    addCopyButtons();
+                    break;
+                }
+                else if (text.startsWith('[AUDIO]')) {
+                    playAudio(text.replace('[AUDIO]', ''));
+                }
+                else {
+                    fullAnswer += text;
+                    botBox.innerHTML = marked.parse(fullAnswer);
+                }
+            }
+        }
+    }
+}
+</script>
