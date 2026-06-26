@@ -25,21 +25,26 @@ def ask():
         user_question = data.get("question", "").strip()
         memory = data.get("memory", []) # Get memory from frontend
 
-        if not user_question:
-            return jsonify({"error": "No question provided"}), 400
+                # Build messages with memory + system prompt - FIXED FOR PRO SPELLING
+        system_prompt = """You are BCorp Tech AI, a professional engineer and teacher.
+        Rules:
+        1. Use correct English grammar and spelling always
+        2. Add space after markdown symbols: ### Heading, **bold**, *italic*
+        3. Put space between words and code: "In Python" not "InPython"
+        4. Be clear, helpful, professional tone
+        5. Use Pidgin only if user uses it first"""
 
-        # Build messages with memory + system prompt
-        messages = [{"role": "system", "content": "You are BCorp Tech AI. Be helpful, clear, use Pidgin if user uses it. Use markdown for code."}]
+        messages = [{"role": "system", "content": system_prompt}]
         messages.extend(memory) # Add old chat
         messages.append({"role": "user", "content": user_question})
 
         def generate():
-            # Stream from Groq
+            # Stream from Groq - FIXED TEMPERATURE FOR NATURAL WRITING
             stream = client.chat.completions.create(
                 model="llama-3.3-70b-versatile",
                 messages=messages,
-                max_tokens=500,
-                temperature=0.3,
+                max_tokens=800, # Increased from 500 for better answers
+                temperature=0.6, # Changed from 0.3. Higher = more natural, better spacing
                 stream=True
             )
 
@@ -47,9 +52,14 @@ def ask():
             for chunk in stream:
                 if chunk.choices[0].delta.content is not None:
                     text = chunk.choices[0].delta.content
+
+                    # FIX: Add space after markdown symbols if missing
+                    text = text.replace('###', '### ').replace('**', '** ').replace('*', '* ')
+                    text = text.replace('InPython', 'In Python').replace('da difference', 'the difference')
+
                     full_answer += text
                     yield f"data: {text}\n\n" # Send chunk fast to browser
-
+        
             # After stream done, save memory + generate audio
             memory.append({"role": "user", "content": user_question})
             memory.append({"role": "assistant", "content": full_answer})
