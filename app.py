@@ -29,17 +29,27 @@ def ask():
 
         prompt = f"You are BCorp Tech AI. Provide clear, accurate, technical explanations for engineers. Use professional english .\n\nQuestion: {user_question}"
 
-        # Groq call instead of Gemini
-        chat_completion = client.chat.completions.create(
-            messages=[{"role": "user", "content": prompt}],
-            model="llama-3.3-70b-versatile",
-            max_tokens=500,
-            temperature=0.3
-            stream=True 
-        )
-        answer = chat_completion.choices[0].message.content
+    # Groq call with STREAMING
+chat_completion = client.chat.completions.create(
+    messages=[{"role": "user", "content": prompt}],
+    model="llama-3.3-70b-versatile",
+    max_tokens=500,
+    temperature=0.3,
+    stream=True # You already have this ✅
+)
 
-        audio_url = generate_audio(answer)
+# This is the magic - collect chunks as they come
+answer = ""
+for chunk in chat_completion:
+    if chunk.choices[0].delta.content is not None:
+        answer += chunk.choices[0].delta.content
+        # Send chunk to frontend immediately
+        yield f"data: {chunk.choices[0].delta.content}\n\n"
+
+# After all chunks done, now generate audio + return
+audio_url = generate_audio(answer)
+
+        
 
         return jsonify({
             "answer": answer,
