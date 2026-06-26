@@ -219,132 +219,142 @@
     </div>
 
     <script>
-        let memory = JSON.parse(localStorage.getItem('brain_memory')) || [];
-        let isSending = false; // FIX: Prevent double clicks
+    let memory = JSON.parse(localStorage.getItem('brain_memory')) || [];
+    let isSending = false;
 
-        function addMessage(role, text, id = Date.now()) {
-            const div = document.createElement('div');
-            div.className = 'message ' + (role === 'user' ? 'user-msg' : 'ai-msg');
-            div.id = 'msg-' + id;
-            div.innerHTML = marked.parse(text) + `<button class="delete-btn" onclick="deleteMsg(${id})">×</button>`;
-            document.getElementById('chatBox').appendChild(div);
-            return div;
+    function addMessage(role, text, id = Date.now()) {
+        const div = document.createElement('div');
+        div.className = 'message ' + (role === 'user' ? 'user-msg' : 'ai-msg');
+        div.id = 'msg-' + id;
+        div.innerHTML = marked.parse(text) + `<button class="delete-btn" onclick="deleteMsg(${id})">×</button>`;
+        document.getElementById('chatBox').appendChild(div);
+        return div;
+    }
+
+    function deleteMsg(id) {
+        document.getElementById('msg-' + id).remove();
+    }
+
+    function clearChat() {
+        if (confirm('Clear all chat?')) {
+            document.getElementById('chatBox').innerHTML = '';
+            memory = [];
+            localStorage.removeItem('brain_memory');
+        }
+    }
+
+    function addCopyButtons() {
+        document.querySelectorAll('.ai-msg pre code').forEach(block => {
+            if (block.parentElement.querySelector('.copy-btn')) return;
+            let btn = document.createElement('button');
+            btn.innerText = 'Copy';
+            btn.className = 'copy-btn';
+            btn.onclick = () => {
+                navigator.clipboard.writeText(block.innerText);
+                btn.innerText = 'Copied!';
+                setTimeout(() => btn.innerText = 'Copy', 2000);
+            };
+            block.parentElement.appendChild(btn);
+        });
+    }
+
+    function playAudio(url) {
+        const audio = new Audio(url);
+        audio.play().catch(e => console.log('Audio error:', e));
+    }
+
+    // NEW: Typewriter effect like Meta AI
+    async function typeWriter(element, text) {
+        element.innerHTML = '';
+        const words = text.split(' ');
+        let currentText = '';
+        
+        for (let i = 0; i < words.length; i++) {
+            currentText += words[i] + ' ';
+            element.innerHTML = marked.parse(currentText) + `<button class="delete-btn" onclick="deleteMsg(${element.id.split('-')[1]})">×</button>`;
+            document.getElementById('chatBox').scrollTop = document.getElementById('chatBox').scrollHeight;
+            await new Promise(r => setTimeout(r, 20)); // 20ms = smooth like ChatGPT
+        }
+        addCopyButtons();
+    }
+
+    async function sendMessage() {
+        if (isSending) return;
+        isSending = true;
+
+        const input = document.getElementById('userInput');
+        const chatBox = document.getElementById('chatBox');
+        const btn = document.getElementById('sendBtn');
+        const message = input.value.trim();
+        if (!message) {
+            isSending = false;
+            return;
         }
 
-        function deleteMsg(id) {
-            document.getElementById('msg-' + id).remove();
-        }
+        const msgId = Date.now();
+        addMessage('user', message, msgId);
+        memory.push({role: 'user', content: message});
+        
+        input.value = '';
+        btn.disabled = true;
 
-        function clearChat() {
-            if (confirm('Clear all chat?')) {
-                document.getElementById('chatBox').innerHTML = '';
-                memory = [];
-                localStorage.removeItem('brain_memory');
-            }
-        }
+        const botBox = addMessage('ai', '<span class="typing">Brain 3.0 thinking</span>', msgId + 1);
+        let fullAnswer = '';
 
-        function addCopyButtons() {
-            document.querySelectorAll('.ai-msg pre code').forEach(block => {
-                if (block.parentElement.querySelector('.copy-btn')) return;
-                let btn = document.createElement('button');
-                btn.innerText = 'Copy';
-                btn.className = 'copy-btn';
-                btn.onclick = () => {
-                    navigator.clipboard.writeText(block.innerText);
-                    btn.innerText = 'Copied!';
-                    setTimeout(() => btn.innerText = 'Copy', 2000);
-                };
-                block.parentElement.appendChild(btn);
+        try {
+            const response = await fetch('/ask', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({question: message, memory: memory})
             });
-        }
 
-        function playAudio(url) {
-            const audio = new Audio(url);
-            audio.play().catch(e => console.log('Audio error:', e));
-        }
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
 
-        async function sendMessage() {
-            if (isSending) return; // FIX: Block multiple sends
-            isSending = true;
+            while (true) {
+                const {done, value} = await reader.read();
+                if (done) break;
 
-            const input = document.getElementById('userInput');
-            const chatBox = document.getElementById('chatBox');
-            const btn = document.getElementById('sendBtn');
-            const message = input.value.trim();
-            if (!message) {
-                isSending = false;
-                return;
-            }
+                const chunk = decoder.decode(value);
+                const lines = chunk.split('\n');
 
-            // Add user message ONCE
-            const msgId = Date.now();
-            addMessage('user', message, msgId);
-            memory.push({role: 'user', content: message});
-            
-            input.value = '';
-            btn.disabled = true;
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        const text = line.replace('data: ', '');
 
-            // Create ONE AI message box for streaming
-            const botBox = addMessage('ai', '<span class="typing">Brain 3.0 thinking</span>', msgId + 1);
-            let fullAnswer = '';
-
-            try {
-                const response = await fetch('/ask', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({question: message, memory: memory})
-                });
-
-                const reader = response.body.getReader();
-                const decoder = new TextDecoder();
-
-                while (true) {
-                    const {done, value} = await reader.read();
-                    if (done) break;
-
-                    const chunk = decoder.decode(value);
-                    const lines = chunk.split('\n');
-
-                    for (const line of lines) {
-                        if (line.startsWith('data: ')) {
-                            const text = line.replace('data: ', '');
-
-                            if (text === '[DONE]') {
-                                memory.push({role: 'assistant', content: fullAnswer});
-                                if (memory.length > 20) memory = memory.slice(-20);
-                                localStorage.setItem('brain_memory', JSON.stringify(memory));
-                                addCopyButtons();
-                                break;
-                            }
-                            else if (text.startsWith('[AUDIO]')) {
-                                playAudio(text.replace('[AUDIO]', ''));
-                            }
-                            else {
-                                fullAnswer += text;
-                                botBox.innerHTML = marked.parse(fullAnswer) + `<button class="delete-btn" onclick="deleteMsg(${msgId + 1})">×</button>`;
-                                chatBox.scrollTop = chatBox.scrollHeight;
-                            }
+                        if (text === '[DONE]') {
+                            memory.push({role: 'assistant', content: fullAnswer});
+                            if (memory.length > 20) memory = memory.slice(-20);
+                            localStorage.setItem('brain_memory', JSON.stringify(memory));
+                            break;
+                        }
+                        else if (text.startsWith('[AUDIO]')) {
+                            playAudio(text.replace('[AUDIO]', ''));
+                        }
+                        else {
+                            fullAnswer += text;
+                            // Typewriter effect instead of instant
+                            await typeWriter(botBox, fullAnswer);
                         }
                     }
                 }
-            } catch (e) {
-                botBox.innerHTML = 'Connection error. Check internet.<button class="delete-btn" onclick="deleteMsg(' + (msgId + 1) + ')">×</button>';
             }
-            
-            btn.disabled = false;
-            isSending = false; // FIX: Re-enable after done
-            chatBox.scrollTop = chatBox.scrollHeight;
+        } catch (e) {
+            botBox.innerHTML = 'Connection error. Check internet.<button class="delete-btn" onclick="deleteMsg(' + (msgId + 1) + ')">×</button>';
         }
+        
+        btn.disabled = false;
+        isSending = false;
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
 
-        function quickMsg(text) {
-            if (isSending) return;
-            document.getElementById('userInput').value = text;
-            sendMessage();
-        }
+    function quickMsg(text) {
+        if (isSending) return;
+        document.getElementById('userInput').value = text;
+        sendMessage();
+    }
 
-        document.getElementById('userInput').addEventListener('keypress', e => {
-            if (e.key === 'Enter') sendMessage();
-        });
+    document.getElementById('userInput').addEventListener('keypress', e => {
+        if (e.key === 'Enter') sendMessage();
+    });
     </script>
-</body>
-  </html>
