@@ -268,17 +268,17 @@
         audio.play().catch(e => console.log('Audio error:', e));
     }
 
-    // NEW: Typewriter effect like Meta AI
-    async function typeWriter(element, text) {
-        element.innerHTML = '';
-        const words = text.split(' ');
-        let currentText = '';
-        
-        for (let i = 0; i < words.length; i++) {
-            currentText += words[i] + ' ';
-            element.innerHTML = marked.parse(currentText) + `<button class="delete-btn" onclick="deleteMsg(${element.id.split('-')[1]})">×</button>`;
-            document.getElementById('chatBox').scrollTop = document.getElementById('chatBox').scrollHeight;
-            await new Promise(r => setTimeout(r, 20)); // 20ms = smooth like ChatGPT
+    // FIXED: Typewriter without duplication
+async function typeWriter(element, newText) {
+    const currentText = element.textContent.replace('×', '').trim(); // Remove × button text
+    const newChunk = newText.slice(currentText.length); // Only type new words
+    
+    for (let char of newChunk) {
+        currentText = currentText + char;
+        element.innerHTML = marked.parse(currentText);
+        document.getElementById('chatBox').scrollTop = document.getElementById('chatBox').scrollHeight;
+        await new Promise(r => setTimeout(r, 15)); // 15ms = Meta AI speed
+    }
         }
         addCopyButtons();
     }
