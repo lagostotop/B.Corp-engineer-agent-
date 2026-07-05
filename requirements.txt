@@ -4,5 +4,4 @@ supabase==2.7.0
 groq==0.11.0
 gtts==2.5.1
 pillow==10.4.0
-pip install tavily-python
-pip freeze > requirements.txt
+tavily-python==0.5.1
