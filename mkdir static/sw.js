@@ -1,37 +1,40 @@
-{
-  "name": "Brain 3.0 by B.CORP",
-  "short_name": "Brain 3.0",
-  "description": "Nigeria's most advanced AI by B.CORP Technologies",
-  "start_url": "/",
-  "scope": "/",
-  "icons": [
-    {
-      "src": "/static/icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "/static/icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "maskable"
-    },
-    {
-      "src": "/static/icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "/static/icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable"
-    }
-  ],
-  "theme_color": "#00BFFF",
-  "background_color": "#0A0A0F",
-  "display": "standalone",
-  "orientation": "portrait"
-      }
+const CACHE_NAME = 'brain30-v1';
+const ASSETS_TO_CACHE = [
+  '/',
+  '/static/manifest.json',
+  '/static/icon-192.png',
+  '/static/icon-512.png',
+  '/static/apple-touch-icon.png'
+];
+
+// INSTALL
+self.addEventListener('install', (e) => {
+  e.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => {
+      return cache.addAll(ASSETS_TO_CACHE);
+    }).then(() => self.skipWaiting()) // activate immediately
+  );
+});
+
+// ACTIVATE - delete old caches
+self.addEventListener('activate', (e) => {
+  e.waitUntil(
+    caches.keys().then((keys) => 
+      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
+    ).then(() => self.clients.claim())
+  );
+});
+
+// FETCH - Cache First
+self.addEventListener('fetch', (e) => {
+  // Only cache GET requests
+  if (e.request.method !== 'GET') return;
+
+  e.respondWith(
+    caches.match(e.request).then((cached) => {
+      return cached || fetch(e.request).catch(() => {
+        // Optional: return offline.html if fetch fails
+      });
+    })
+  );
+});
