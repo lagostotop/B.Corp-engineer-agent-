@@ -1,1 +1,63 @@
+# Secrets - NEVER commit
+.env
+.env.local
+.env.production
+credentials.json
+*.key
+*.pem
 
+# IMPORTANT: DO NOT IGNORE config.py
+# config.py loads env vars. We commit the file, not the secrets inside it.
+#!config.py
+
+# AI API Keys - template only
+# Put your real keys in Render Environment, not here
+GROQ_API_KEY=
+OPENAI_API_KEY=
+ANTHROPIC_API_KEY=
+TAVILY_API_KEY=
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+venv/
+.venv/
+env/
+ENV/
+
+# OS files
+.DS_Store
+Thumbs.db
+*.tmp
+
+# b.corp temp files - Render /tmp folder
+/tmp/
+*.mp3
+*.wav
+*.ogg
+
+# Logs
+*.log
+logs/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Local testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# PWA - Don't ignore static files
+# We NEED to commit these for the app to work
+!static/icon-180.png
+!static/icon-192.png
+!static/icon-512.png
+!static/sw.js
+!static/manifest.json
+!static/favicon.ico
