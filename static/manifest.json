@@ -2,12 +2,14 @@
   "name": "Brain 3.0 by B.CORP",
   "short_name": "Brain3",
   "description": "Nigeria's AI Assistant by B.CORP Technologies",
+  "lang": "en",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#0A0A0F",
   "theme_color": "#00BFFF",
+  "categories": ["productivity", "education", "utilities"],
   "icons": [
     { 
       "src": "/static/icon-192.png", 
@@ -25,6 +27,14 @@
       "src": "/static/icon-180.png", 
       "sizes": "180x180", 
       "type": "image/png" 
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "New Chat",
+      "short_name": "Chat",
+      "description": "Start a new conversation with Brain 3.0",
+      "url": "/"
     }
   ]
 }
