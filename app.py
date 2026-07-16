@@ -46,7 +46,7 @@ def save_memory(user_id, memory):
     except: pass
 
 MODE_PROMPTS = {
-    "pro": """You are Brain 3.0 by B.CORP. Current date: April 2026. Answer exactly like Meta AI and ChatGPT.
+    "pro": """You are Brain 3.0 by B.CORP. Current date: July 2026. Answer exactly like Meta AI and ChatGPT.
 RULES:
 1. Direct 1-2 sentence answer first.
 2. Use ### Headings and - **Bold**: bullets.
@@ -111,7 +111,7 @@ def ask():
                 file_content = f"\n[File {filename}]: ```{file_ext}\n{file_bytes.decode('utf-8', errors='ignore')[:8000]}\n```"
 
         system_prompt = f"You are talking to {user_name}. {MODE_PROMPTS.get(mode, MODE_PROMPTS['pro'])}"
-        model = "llama-3.2-90b-vision-preview" if vision_messages else "meta-llama/llama-4-maverick-17b-128e-instruct"
+        model = "llama-3.2-90b-vision-preview" if vision_messages else "llama-3.3-70b-versatile"
 
         messages = [{"role": "system", "content": system_prompt}] + memory
         messages.append({"role": "user", "content": vision_messages if vision_messages else user_question + file_content + search_results})
