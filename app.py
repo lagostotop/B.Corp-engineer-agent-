@@ -78,7 +78,7 @@ def save_memory(user_id, memory):
         supabase.table("brain30_memory").upsert({"user_id": user_id, "memory": memory}).execute()
     except: pass
 
-SYSTEM_PROMPT = """You are Brain 3.0 by B.CORP. Current date: July 2026. You are CEO's personal AI assistant.
+SYSTEM_PROMPT = """You are Brain 3.0 by B.CORP. Current date: July 19 2026. You are CEO's personal AI assistant.
 You can see images, read PDFs, write code, browse the web, AND generate images.
 Act like ChatGPT + Meta AI combined.
 
@@ -118,20 +118,9 @@ def ask():
 
         if not user_id: return jsonify({"error": "Not logged in"}), 401
 
-        # IMAGE GENERATION - CHECK FIRST BEFORE STREAMING
         if needs_image(user_question):
-            prompt = user_question
-            for word in ['imagine', 'generate image', 'create image', 'draw', 'picture of', 'make me a']:
-                prompt = prompt.replace(word, "")
-            prompt = prompt.strip()
-            
-            image_url = generate_image(prompt)
-            if image_url:
-                answer = f"### Generated Image CEO ###\n\n**Prompt**: {prompt}\n\nHere is your image:"
-                return jsonify({ "answer": answer, "image": image_url })
-            else:
-                return jsonify({"error": "Image generation failed. Check REPLICATE_API_TOKEN in Render and your credits"}), 500
-
+    image_url = generate_image(prompt)
+    return jsonify({ "answer": answer, "image": image_url }) # NOT streaming
         # NORMAL CHAT
         memory = load_memory(user_id)
         search_results = ""
