@@ -118,9 +118,19 @@ def ask():
 
         if not user_id: return jsonify({"error": "Not logged in"}), 401
 
-        if needs_image(user_question):
+# IMAGE GENERATION - CHECK FIRST BEFORE STREAMING
+if needs_image(user_question):
+    prompt = user_question
+    for word in ['imagine', 'generate image', 'create image', 'draw', 'picture of', 'make me a']:
+        prompt = prompt.replace(word, "")
+    prompt = prompt.strip()
+    
     image_url = generate_image(prompt)
-    return jsonify({ "answer": answer, "image": image_url }) # NOT streaming
+    if image_url:
+        answer = f"### Generated Image CEO ###\n\n**Prompt**: {prompt}\n\nHere is your image:"
+        return jsonify({ "answer": answer, "image": image_url }) # <-- This is what triggers the <img> tag
+    else:
+        return jsonify({"error": "Image generation failed. Check REPLICATE_API_TOKEN"}), 500
         # NORMAL CHAT
         memory = load_memory(user_id)
         search_results = ""
