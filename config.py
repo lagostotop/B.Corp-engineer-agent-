@@ -8,6 +8,7 @@ class Config:
     TAVILY_API_KEY = os.getenv("TAVILY_API_KEY") # LIVE WEB SEARCH
     SUPABASE_URL = os.getenv("SUPABASE_URL")
     SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+    REPLICATE_API_TOKEN = os.getenv("REPLICATE_API_TOKEN")
     PORT = int(os.getenv("PORT", 10000))
 
     @staticmethod
