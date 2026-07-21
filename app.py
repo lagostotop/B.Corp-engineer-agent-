@@ -119,42 +119,7 @@ def ask():
         messages.append({"role": "user", "content": f"Use full words. No cutoff. Format with markdown headers and bullets. Question: {user_question}" + file_content + search_results})
 
         def generate():
-            full = ""
-            buffer = "" # FIX 2: Don't yield until we have a full word
-            try:
-                stream = client.chat.completions.create(
-                    model=model,
-                    messages=messages,
-                    max_tokens=4000,
-                    temperature=0.4, # Slightly higher to avoid rushing
-                    stream=True
-                )
-                for chunk in stream:
-                    if chunk.choices and chunk.choices[0].delta.content:
-                        buffer += chunk.choices[0].delta.content
-                        # Only flush buffer when we hit space or punctuation
-                        if re.search(r'[ \n.,;:!?]$', buffer):
-                            text = clean_markdown(buffer)
-                            full += text
-                            yield f"data: {text}\n\n"
-                            buffer = ""
-                # Flush remaining buffer
-                if buffer:
-                    text = clean_markdown(buffer)
-                    full += text
-                    yield f"data: {text}\n\n"
 
-                try:
-                    new_memory = memory + [{"role": "user", "content": user_question}, {"role": "assistant", "content": full}]
-                    save_memory(user_id, new_memory)
-                except Exception as e:
-                    print("MEMORY SAVE FAILED:", e)
-
-            except Exception as e:
-                print("GROQ STREAM ERROR:", traceback.format_exc())
-                yield f"data: **Brain Error:** {str(e)}\n\n"
-
-            yield f"data: [DONE]\n\n"
 
         return Response(stream_with_context(generate()), mimetype='text/event-stream')
 
