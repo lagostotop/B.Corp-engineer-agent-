@@ -15,7 +15,7 @@ supabase: Client = create_client(config.SUPABASE_URL, config.SUPABASE_KEY)
 ALLOWED_EXTENSIONS = {'pdf', 'txt', 'py', 'js', 'html', 'css', 'md'}
 app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024
 
-def allowed_file(filename):
+def allowed_file(filename):k
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def clean_markdown(text):
@@ -119,6 +119,35 @@ def ask():
         messages.append({"role": "user", "content": f"Use full words. No cutoff. Format with markdown headers and bullets. Question: {user_question}" + file_content + search_results})
 
         def generate():
+    full = ""
+    buffer = ""
+    try:
+        stream = client.chat.completions.create(
+            model=model,
+            messages=messages,
+            max_tokens=4000,
+            temperature=0.4,
+            stream=True
+        )
+        for chunk in stream:
+            if chunk.choices and chunk.choices[0].delta.content:
+                buffer += chunk.choices[0].delta.content
+
+        # ONLY CLEAN ONCE AT THE END - this stops word cutoff
+        full = clean_markdown(buffer)
+        yield f"data: {full}\n\n"
+
+        try:
+            new_memory = memory + [{"role": "user", "content": user_question}, {"role": "assistant", "content": full}]
+            save_memory(user_id, new_memory)
+        except Exception as e:
+            print("MEMORY SAVE FAILED:", e)
+
+    except Exception as e:
+        print("GROQ STREAM ERROR:", traceback.format_exc())
+        yield f"data: **Brain Error:** {str(e)}\n\n"
+
+    yield f"data: [DONE]\n\n"
 
 
         return Response(stream_with_context(generate()), mimetype='text/event-stream')
