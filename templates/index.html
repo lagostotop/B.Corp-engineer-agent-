@@ -89,5 +89,117 @@
             <button class="send-btn" onclick="sendMessage()" id="sendBtn">Send</button>
         </div>
     </div>
+    <script>
+    marked.setOptions({ breaks: true, gfm: true });
+    let supabaseClient = null; let userId = null; let userEmail = null; let isSending = false; let selectedFile = null;
+
+    fetch('/config?v=21').then(res => res.json()).then(config => {
+        supabaseClient = supabase.createClient(config.supabase_url, config.supabase_key)
+        checkAuth();
+    });
+
+    function checkAuth() { supabaseClient.auth.getSession().then(({ data: { session } }) => { if(session) { userId = session.user.id; userEmail = session.user.email; showApp(); } }); }
+    async function signUp() { const email=document.getElementById('email').value; const password=document.getElementById('password').value; const {error}=await supabaseClient.auth.signUp({email,password}); if(error) document.getElementById('authError').innerText=error.message; else alert('Check email to confirm'); }
+    async function signIn() { const email=document.getElementById('email').value; const password=document.getElementById('password').value; const {error}=await supabaseClient.auth.signInWithPassword({email,password}); if(error) document.getElementById('authError').innerText=error.message; }
+    async function logout() { await supabaseClient.auth.signOut(); location.reload(); }
+
+    function formatAIText(text) {
+        // FIXED: Add proper spacing, periods, and line breaks
+        text = text.replace(/,([a-zA-Z])/g, ', $1'); // space after comma
+        text = text.replace(/\.([a-zA-Z])/g, '. $1'); // space after period
+        text = text.replace(/([a-z])([A-Z])/g, '$1 $2'); // space between camelCase
+        text = text.replace(/([^\n])###/g, '\n\n###'); // header spacing
+        text = text.replace(/([^\n])- \*\*/g, '\n- **'); // bullet spacing
+        text = text.replace(/([^\n])(\d+\.)/g, '\n$2'); // numbered list spacing
+        return text;
+    }
+
+    function addMessage(role, text) {
+        const div = document.createElement('div');
+        div.className = 'message ' + (role === 'user'? 'user-msg' : 'ai-msg');
+        if(role === 'ai') text = formatAIText(text);
+        div.innerHTML = marked.parse(text);
+        document.getElementById('chatBox').appendChild(div);
+        document.getElementById('chatBox').scrollTop = document.getElementById('chatBox').scrollHeight;
+        return div;
+    }
+
+    function showApp() {
+        document.getElementById('authScreen').style.display = 'none';
+        document.getElementById('appContainer').style.display = 'flex';
+        document.getElementById('userEmail').innerText = userEmail;
+        
+        // NEW CEO INTRO - Only shows first time
+        if (!localStorage.getItem('welcomed')) {
+            addMessage('ai', `### Welcome CEO
+
+I'm **B.CORP Brain 3.0** - your AI Engineer.
+
+**What I do:**
+- **Code**: Python, JavaScript, HTML, CSS, React
+- **Debug**: Fix bugs and optimize fast
+- **Explain**: Break down anything clearly
+- **Pidgin**: I fit chat you Naija too
+
+What are we building today?`);
+            localStorage.setItem('welcomed', 'true');
+        }
+    }
+
+    document.getElementById('fileInput').addEventListener('change', (e)=>{ selectedFile = e.target.files[0]; });
+
+    async function sendMessage() {
+        if(isSending) return;
+        const input = document.getElementById('userInput');
+        const question = input.value.trim();
+        if(!question &&!selectedFile) return;
+
+        isSending = true;
+        document.getElementById('sendBtn').disabled = true;
+        addMessage('user', question);
+        input.value = '';
+
+        const aiMsgDiv = addMessage('ai', '');
+        aiMsgDiv.classList.add('typing');
+
+        const formData = new FormData();
+        formData.append('question', question);
+        formData.append('user_id', userId);
+        if(selectedFile) formData.append('file', selectedFile);
+
+        try {
+            const res = await fetch('/ask', { method: 'POST', body: formData });
+            if(!res.ok) throw new Error('Server Error: ' + res.status);
+
+            const reader = res.body.getReader();
+            const decoder = new TextDecoder();
+            let fullText = '';
+            while(true) {
+                const {value, done} = await reader.read();
+                if(done) break;
+                const chunk = decoder.decode(value);
+                const lines = chunk.split('\n');
+                for(const line of lines) {
+                    if(line.startsWith('data: ')) {
+                        const data = line.substring(6);
+                        if(data === '[DONE]') break;
+                        fullText += data;
+                        aiMsgDiv.innerHTML = marked.parse(formatAIText(fullText));
+                        document.getElementById('chatBox').scrollTop = document.getElementById('chatBox').scrollHeight;
+                    }
+                }
+            }
+        } catch(err) {
+            aiMsgDiv.innerHTML = marked.parse("**Brain 3.0 Error:** " + err.message + "\n\nCheck Render logs for backend crash.");
+        }
+
+        aiMsgDiv.classList.remove('typing');
+        isSending = false;
+        document.getElementById('sendBtn').disabled = false;
+        selectedFile = null;
+    }
+
+    document.getElementById('userInput').addEventListener('keypress', e => { if (e.key === 'Enter' &&!e.shiftKey) { e.preventDefault(); sendMessage(); } });
+    </script>
 </body>
   </html>
