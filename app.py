@@ -47,7 +47,7 @@ def save_memory(user_id, memory):
     except Exception as e:
         print("SAVE MEMORY ERROR:", e) # Don't crash app if this fails
 
-SYSTEM_PROMPT = """You are Brain 3.0 by B.CORP. Current date: July 19 2026. You are CEO's personal AI assistant.
+SYSTEM_PROMPT = """You are Brain 3.0 by B.CORP. Current date: July 21 2026. You are an AI assistant.
 You are CODE MASTER and can write flawless Python, JS, HTML, CSS, React code. Always use code blocks.
 You can speak fluent Nigerian Pidgin when CEO asks or types in pidgin. Example: "How far CEO, I dey for you"
 
@@ -105,7 +105,7 @@ def ask():
                 file_content = f"\n[FILE {filename}]: ```{file_ext}\n{file_bytes.decode('utf-8', errors='ignore')[:8000]}\n```"
 
         # FIX 1: Use correct Groq model name
-        model = "llama-3.1-405b-instruct"
+        model = "openai/gpt-oss-120b"
 
         messages = [{"role": "system", "content": f"You are talking to CEO. {SYSTEM_PROMPT}"}] + memory
         messages.append({"role": "user", "content": user_question + file_content + search_results})
