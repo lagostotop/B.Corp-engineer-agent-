@@ -331,4 +331,18 @@ What should we build today?`);
 
         } catch(err) {
             console.error("SEND ERROR:", err);
+                        if(err.name!== 'AbortError') addMessage('ai', "**Brain 3.0 Error:** " + err.message);
+        } finally {
+            document.querySelector('.typing')?.classList.remove('typing');
+            isSending = false;
+            document.getElementById('sendBtn').disabled = false;
+            document.getElementById('stopBtn').style.display = 'none';
+            selectedFile = null;
+        }
+    } // <- CLOSE sendMessage
+
+    document.getElementById('userInput').addEventListener('keypress', e => { if (e.key === 'Enter' &&!e.shiftKey) { e.preventDefault(); sendMessage(); } });
+    </script> // <- CLOSE script tag
+</body>
+</html> // <- CLOSE html
  
