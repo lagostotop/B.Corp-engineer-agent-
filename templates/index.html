@@ -333,4 +333,29 @@ What should we build today?`);
             aiMsgDiv.classList.remove('typing');
             aiMsgDiv.innerHTML = `<button class="copy-btn" onclick="copyText(this)">Copy</button>` + renderAI(fullText);
             document.getElementById('regenBtn').style.display = 'block';
-            if(window.innerWidth < 768) toggleSidebar
+            if(window.innerWidth < 768) toggleSidebar();
+
+            }
+        }
+    }
+    aiMsgDiv.classList.remove('typing');
+    aiMsgDiv.innerHTML = `<button class="copy-btn" onclick="copyText(this)">Copy</button>` + renderAI(fullText);
+    document.getElementById('regenBtn').style.display = 'block';
+    if(window.innerWidth < 768) toggleSidebar();
+
+} catch(err) {
+    console.error("SEND ERROR:", err);
+    aiMsgDiv.classList.remove('typing');
+    aiMsgDiv.innerHTML = `<button class="copy-btn" onclick="copyText(this)">Copy</button> **Error:** ${err.message}`;
+} finally {
+    isSending = false;
+    document.getElementById('sendBtn').disabled = false;
+    document.getElementById('stopBtn').style.display = 'none';
+    selectedFile = null;
+    document.getElementById('fileInput').value = '';
+}
+} // closes sendMessage
+
+</script>
+</body>
+</html>
