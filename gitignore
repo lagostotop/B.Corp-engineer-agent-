@@ -1,1 +1,73 @@
+# ========================================
+# B.CORP SECRETS - NEVER COMMIT THESE
+# ========================================
+.env
+.env.local
+.env.production
+credentials.json
+*.key
+*.pem
 
+# IMPORTANT: COMMIT config.py BUT NOT SECRETS
+!config.py
+
+# ========================================
+# AI API KEYS TEMPLATE - FOR REFERENCE ONLY
+# ========================================
+# Create a.env.example file with this instead
+# GROQ_API_KEY=
+# TAVILY_API_KEY=
+# SUPABASE_URL=
+# SUPABASE_KEY=
+# SUPABASE_ANON_KEY=
+# REPLICATE_API_TOKEN=
+
+# ========================================
+# PYTHON
+# ========================================
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+venv/
+.venv/
+env/
+ENV/
+
+# ========================================
+# OS + IDE
+# ========================================
+.DS_Store
+Thumbs.db
+*.tmp
+.vscode/
+.idea/
+*.swp
+
+# ========================================
+# LOGS + TEMP
+# ========================================
+*.log
+logs/
+/tmp/
+*.mp3
+*.wav
+*.ogg
+
+# ========================================
+# TESTING
+# ========================================
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ========================================
+# PWA - DO NOT IGNORE - APP NEEDS THESE
+# ========================================
+!static/icon-180.png
+!static/icon-192.png
+!static/icon-512.png
+!static/sw.js
+!static/manifest.json
+!static/favicon.ico
