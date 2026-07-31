@@ -1,1 +1,56 @@
-
+{
+  "name": "Brain 3.0 by B.CORP",
+  "short_name": "Brain3",
+  "description": "The world's most capable AI Assistant by B.CORP Technologies. Build, decide, and execute 10x faster.",
+  "lang": "en",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0A0A0F",
+  "theme_color": "#00BFFF",
+  "categories": ["productivity", "education", "utilities", "business"],
+  "version": "3.5.7",
+  "icons": [
+    { 
+      "src": "/static/icon-192.png", 
+      "sizes": "192x192", 
+      "type": "image/png", 
+      "purpose": "any maskable" 
+    },
+    { 
+      "src": "/static/icon-512.png", 
+      "sizes": "512x512", 
+      "type": "image/png", 
+      "purpose": "any maskable" 
+    },
+    { 
+      "src": "/static/icon-180.png", 
+      "sizes": "180x180", 
+      "type": "image/png" 
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "New Chat",
+      "short_name": "Chat",
+      "description": "Start a new conversation with Brain 3.0",
+      "url": "/"
+    },
+    {
+      "name": "Upload File",
+      "short_name": "Upload",
+      "description": "Analyze PDF, code, or images with Brain 3.0",
+      "url": "/"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/static/screenshot1.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Brain 3.0 Chat Interface"
+    }
+  ]
+    }
