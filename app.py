@@ -19,7 +19,7 @@ tavily = TavilyClient(api_key=config.TAVILY_API_KEY)
 supabase: Client = create_client(config.SUPABASE_URL, config.SUPABASE_KEY)
 
 ALLOWED_EXTENSIONS = {'pdf', 'txt', 'py', 'js', 'html', 'css', 'md', 'csv', 'json', 'png', 'jpg', 'jpeg'}
-GUEST_ID = "00000-0000-0000-0000-000001"
+GUEST_ID = "00000000-0000-0000-0000-000000000001"
 
 SYSTEM_PROMPT = """
 You are Brain 3.0 by B.CORP. You are the world's most capable AI engineer and strategist.
