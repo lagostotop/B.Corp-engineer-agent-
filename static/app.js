@@ -1,5 +1,5 @@
 marked.setOptions({ breaks: true, gfm: true });
-let userId = "00000-0000-0000-0000-000001";
+let userId = "00000000-0000-0000-0000-000000000001";
 let isSending = false;
 let selectedFile = null;
 let lastQuestion = "";
