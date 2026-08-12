@@ -1,7 +1,7 @@
 /* =========================================================
    BRAIN 3.0 BY B.CORP
-   Frontend Controller v5.3.2
-   Production Debugged Version
+   Frontend Controller v5.4.0
+   JWT Auth + Production Debugged
    ========================================================= */
 
 "use strict";
@@ -12,38 +12,46 @@ if (MARKED_AVAILABLE) {
     catch (error) { console.warn("Brain 3.0: Could not configure marked.js.", error); }
 } else { console.warn("Brain 3.0: marked.js was not loaded."); }
 
-let userId = getGuestId();
+let userId = null; // NOW COMES FROM SUPABASE
 let isSending = false;
 let selectedFile = null;
 let lastQuestion = "";
 let controller = null;
 let currentChatId = null;
 let introShown = false;
+let authToken = null; // NEW: Store Supabase JWT
 
 function $(id) { return document.getElementById(id); }
 
-function getGuestId() {
-    let guestId = null;
-    try { guestId = localStorage.getItem("brain30_guest_id"); } catch (error) { console.warn("Brain 3.0: localStorage unavailable.", error); }
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-    if (!guestId ||!uuidRegex.test(guestId)) {
-        if (window.crypto && typeof window.crypto.randomUUID === "function") { guestId = window.crypto.randomUUID(); }
-        else {
-            guestId = "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, char => {
-                const r = Math.random() * 16 | 0;
-                const v = char === "x"? r : (r & 0x3) | 0x8;
-                return v.toString(16);
-            });
+// NEW: Get auth token from Supabase or fallback to guest
+async function getAuthToken() {
+    // TODO: Replace with real supabase.auth.getSession()
+    // For now: check localStorage or use guest
+    authToken = localStorage.getItem("brain30_access_token");
+    userId = localStorage.getItem("brain30_user_id");
+    
+    if (!authToken) {
+        // GUEST MODE FOR TESTING - REMOVE IN PROD
+        if (!userId) {
+            userId = crypto.randomUUID();
+            localStorage.setItem("brain30_user_id", userId);
         }
-        try { localStorage.setItem("brain30_guest_id", guestId); } catch (error) { console.warn("Brain 3.0: Could not save guest ID.", error); }
-        console.log("Brain 3.0 Guest ID created:", guestId);
+        authToken = `guest-${userId}`; // Backend will reject this in prod
+        console.warn("Brain 3.0: Running in GUEST MODE. Add Supabase Auth for production.");
     }
-    return guestId;
+    return authToken;
+}
+
+function getAuthHeaders() {
+    const headers = { "Accept": "application/json" };
+    if (authToken) headers["Authorization"] = `Bearer ${authToken}`;
+    return headers;
 }
 
 document.addEventListener("DOMContentLoaded", initializeApp);
 
-function initializeApp() {
+async function initializeApp() {
+    await getAuthToken(); // LOAD TOKEN FIRST
     initEvents();
     updateOverlay();
     loadSidebar();
@@ -60,7 +68,6 @@ function initEvents() {
     $("stopBtn")?.addEventListener("click", stopGeneration);
     $("regenBtn")?.addEventListener("click", () => { if (lastQuestion &&!isSending) { sendMessage(lastQuestion, true); } });
 
-    // FIX 1: ONLY FORM SUBMIT. NO CLICK LISTENER
     $("chatForm")?.addEventListener("submit", event => {
         event.preventDefault();
         sendMessage();
@@ -91,7 +98,7 @@ I'm your AI Assistant for 2026. I can:
 - **Explain**: Break complex topics into 3 steps
 - **Search**: Live web data with citations
 ---
-**Guest ID**: \`${userId.slice(0, 8)}...\`
+**User ID**: \`${userId?.slice(0, 8)}...\`
 What would you like to build today?`;
     addMessage("ai", introText);
 }
@@ -122,7 +129,13 @@ async function loadSidebar() {
     const list = $("chatList");
     if (!list) { console.warn("Brain 3.0: #chatList was not found in index.html."); return; }
     try {
-        const response = await fetch(`/api/chats?user_id=${encodeURIComponent(userId)}`, { method: "GET", headers: { "Accept": "application/json" }, cache: "no-store" });
+        // FIX: NO user_id in URL. Auth via header
+        const response = await fetch(`/api/chats`, { 
+            method: "GET", 
+            headers: getAuthHeaders(), 
+            cache: "no-store" 
+        });
+        if (response.status === 401) { alert("Session expired. Please login."); return; }
         if (!response.ok) { console.warn("Sidebar request failed:", response.status); return; }
         const chats = await response.json();
         list.innerHTML = "";
@@ -170,7 +183,13 @@ async function newChat() {
 async function loadChat(chatId) {
     if (!chatId || isSending) { return; }
     try {
-        const response = await fetch(`/api/chat/${encodeURIComponent(chatId)}`, { method: "GET", headers: { "Accept": "application/json" }, cache: "no-store" });
+        const response = await fetch(`/api/chat/${encodeURIComponent(chatId)}`, { 
+            method: "GET", 
+            headers: getAuthHeaders(), // FIX: AUTH HEADER
+            cache: "no-store" 
+        });
+        if (response.status === 401) { alert("Session expired. Please login."); return; }
+        if (response.status === 403) { alert("You don't have access to this chat."); return; }
         if (!response.ok) { throw new Error(`Unable to load chat (${response.status})`); }
         const messages = await response.json();
         currentChatId = chatId;
@@ -195,7 +214,14 @@ async function deleteChat(chatId) {
     const confirmed = window.confirm("Delete this chat? This cannot be undone.");
     if (!confirmed) { return; }
     try {
-        const response = await fetch("/api/chat/delete", { method: "POST", headers: { "Content-Type": "application/json", "Accept": "application/json" }, body: JSON.stringify({ chat_id: chatId, user_id: userId }) });
+        // FIX: NO user_id in body
+        const response = await fetch("/api/chat/delete", { 
+            method: "POST", 
+            headers: { "Content-Type": "application/json", ...getAuthHeaders() }, 
+            body: JSON.stringify({ chat_id: chatId }) 
+        });
+        if (response.status === 401) { alert("Session expired. Please login."); return; }
+        if (response.status === 403) { alert("You don't have access to this chat."); return; }
         if (!response.ok) { throw new Error(`Delete failed (${response.status})`); }
         if (String(currentChatId) === String(chatId)) { await newChat(); } else { await loadSidebar(); }
     } catch (error) { console.error("Delete chat error:", error); alert("Unable to delete this chat."); }
@@ -234,14 +260,6 @@ function antiSmash(text) {
     clean = clean.replace(/web_search\s*\{[\s\S]*?\}/gi, "");
     clean = clean.replace(/save_to_memory\s*\{[\s\S]*?\}/gi, "");
     clean = clean.replace(/\[(\d+)\]"([^"]+)"/g, "[$1] \"$2\"");
-    clean = clean.replace(/([a-z])([A-Z])/g, "$1 $2");
-    clean = clean.replace(/([a-z])(\d)/g, "$1 $2");
-    clean = clean.replace(/(\d)([a-zA-Z])/g, "$1 $2");
-    clean = clean.replace(/([.,!?])([A-Za-z])/g, "$1 $2");
-    clean = clean.replace(/\s+([.,!?;:])/g, "$1");
-    clean = clean.replace(/(\w)\s+'(\w)/g, "$1'$2");
-    clean = clean.replace(/(#{1,6})([A-Za-z])/g, "$1 $2");
-    clean = clean.replace(/[ \t]{2,}/g, " ");
     return clean.trim();
 }
 
@@ -338,6 +356,7 @@ async function sendMessage(questionOverride = null, isRegen = false) {
     let aiMsgDiv;
     try {
         if (isSending) return;
+        await getAuthToken(); // REFRESH TOKEN
         const input = $("userInput");
         const question = questionOverride || input.value.trim();
         if (!question &&!selectedFile) return;
@@ -354,12 +373,18 @@ async function sendMessage(questionOverride = null, isRegen = false) {
 
         const formData = new FormData();
         formData.append('question', question);
-        formData.append('user_id', userId);
+        // REMOVED: formData.append('user_id', userId);
         if (currentChatId) formData.append('chat_id', currentChatId);
         if (selectedFile) formData.append('file', selectedFile);
 
         controller = new AbortController();
-        const res = await fetch('/api/chat', { method: 'POST', body: formData, signal: controller.signal });
+        const res = await fetch('/api/chat', { 
+            method: 'POST', 
+            headers: { "Authorization": `Bearer ${authToken}` }, // FIX: AUTH HEADER
+            body: formData, 
+            signal: controller.signal 
+        });
+        if (res.status === 401) throw new Error('Unauthorized. Please login.');
         if (!res.ok) throw new Error('Server Error: ' + res.status);
 
         // FIX 2: ROBUST SSE BUFFER
@@ -384,10 +409,6 @@ async function sendMessage(questionOverride = null, isRegen = false) {
                 if (data.startsWith('[CHAT_ID]')) {
                     currentChatId = data.replace('[CHAT_ID]', '').replace('[/CHAT_ID]', '');
                     loadSidebar();
-                } else if (data.startsWith('[USER_ID]')) {
-                    const newUserId = data.replace('[USER_ID]', '').replace('[/USER_ID]', '');
-                    userId = newUserId;
-                    localStorage.setItem("brain30_guest_id", newUserId);
                 } else if (data === '[DONE]') {
                     streamDone = true;
                     break;
@@ -408,9 +429,8 @@ async function sendMessage(questionOverride = null, isRegen = false) {
             }
         }
     } finally {
-        // FIX: THIS WAS MISSING
         setSendingState(false);
         isSending = false;
         controller = null;
     }
-  }
+                  }
