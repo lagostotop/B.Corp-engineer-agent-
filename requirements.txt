@@ -13,14 +13,18 @@ flask-cors==4.0.1
 groq==0.11.0
 tavily-python==0.5.1
 replicate==0.25.2
+sentence-transformers==3.0.1  # NEW: For pgvector embeddings
+numpy==1.26.4                 # NEW: Required by sentence-transformers
 
 # Database + Memory
 supabase==2.7.0
 pgvector==0.3.0
 python-dotenv==1.0.1
+psycopg2-binary==2.9.9        # NEW: Postgres driver for pgvector
 
 # File Processing
 PyPDF2==3.0.1
+python-docx==1.1.2            # NEW: For DOCX support in app.py
 pillow==10.4.0
 python-multipart==0.0.9
 
