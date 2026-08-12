@@ -1,41 +1,92 @@
 import os
 from dotenv import load_dotenv
 
-# Load .env only for local dev. Render will ignore this
+# Local development only.
+# Render environment variables take precedence.
 load_dotenv()
 
 class Config:
+    # =========================
+    # AI / SEARCH
+    # =========================
     GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-    TAVILY_API_KEY = os.getenv("TAVILY_API_KEY") # LIVE WEB SEARCH
+    TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
+    REPLICATE_API_TOKEN = os.getenv("REPLICATE_API_TOKEN") # Optional for now
+
+    # =========================
+    # SUPABASE
+    # =========================
     SUPABASE_URL = os.getenv("SUPABASE_URL")
-    SUPABASE_KEY = os.getenv("SUPABASE_KEY") # service_role for backend
-    SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY") # public key for frontend
-    REPLICATE_API_TOKEN = os.getenv("REPLICATE_API_TOKEN")
-    PORT = int(os.getenv("PORT", 10000))
+
+    # SERVER ONLY - Never send this to the browser.
+    SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+
+    # Public/browser key
+    SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY")
+
+    # =========================
+    # SERVER
+    # =========================
+    try:
+        PORT = int(os.getenv("PORT", "10000"))
+    except (TypeError, ValueError):
+        PORT = 10000
+
     FLASK_ENV = os.getenv("FLASK_ENV", "production")
 
-    @staticmethod
-    def validate():
-        required = ["GROQ_API_KEY", "TAVILY_API_KEY", "SUPABASE_URL", "SUPABASE_KEY", "SUPABASE_ANON_KEY"]
-        missing = [key for key in required if not getattr(Config, key)]
-        
+    @classmethod
+    def validate(cls):
+        required = [
+            "GROQ_API_KEY",
+            "TAVILY_API_KEY",
+            "SUPABASE_URL",
+            "SUPABASE_KEY",
+            "SUPABASE_ANON_KEY",
+        ]
+        # REPLICATE_API_TOKEN is optional until we add image gen
+
+        missing = [key for key in required if not getattr(cls, key, None)]
+
         if missing:
-            raise ValueError(f"B.CORP FATAL: Missing env vars: {', '.join(missing)}")
-        
-        # Security check: never allow service_role key in browser
-        if Config.SUPABASE_KEY == Config.SUPABASE_ANON_KEY:
-            raise ValueError("B.CORP FATAL: SUPABASE_KEY and SUPABASE_ANON_KEY cannot be the same")
-            
-        # Check key format to prevent 401 errors
-        if not Config.SUPABASE_KEY.startswith("eyJ"):
-            raise ValueError("B.CORP FATAL: SUPABASE_KEY does not look like a valid JWT")
-        if not Config.SUPABASE_ANON_KEY.startswith("eyJ"):
-            raise ValueError("B.CORP FATAL: SUPABASE_ANON_KEY does not look like a valid JWT")
-            
-        print("✅ B.CORP config loaded - Groq + Tavily + Supabase active")
-        print(f"   Environment: {Config.FLASK_ENV}")
-        print(f"   Port: {Config.PORT}")
-        print(f"   Supabase URL: {Config.SUPABASE_URL[:40]}...")
+            raise ValueError(
+                "B.CORP FATAL: Missing environment variables: "
+                + ", ".join(missing)
+            )
+
+        # =========================
+        # SECURITY CHECKS
+        # =========================
+
+        if cls.SUPABASE_KEY == cls.SUPABASE_ANON_KEY:
+            raise ValueError(
+                "B.CORP FATAL: SUPABASE_KEY and "
+                "SUPABASE_ANON_KEY cannot be the same"
+            )
+
+        # FORCE HTTPS IN PRODUCTION
+        if cls.FLASK_ENV == "production" and not cls.SUPABASE_URL.startswith("https://"):
+            raise ValueError(
+                "B.CORP FATAL: SUPABASE_URL must use HTTPS in production"
+            )
+        # Allow http://localhost for local dev
+        if not cls.SUPABASE_URL.startswith(("https://", "http://")):
+            raise ValueError(
+                "B.CORP FATAL: SUPABASE_URL must be a valid URL"
+            )
+
+        # =========================
+        # STARTUP LOGGING - NO SECRETS
+        # =========================
+        if cls.FLASK_ENV != "production":
+            print("✅ B.CORP configuration loaded")
+            print("   Groq: ACTIVE")
+            print("   Tavily: ACTIVE")
+            print("   Supabase: ACTIVE")
+            print(f"   Environment: {cls.FLASK_ENV}")
+            print(f"   Port: {cls.PORT}")
+            print("   Supabase service key: SERVER ONLY")
+        else:
+            print("✅ B.CORP configuration loaded [PROD]")
 
 config = Config()
 config.validate()
