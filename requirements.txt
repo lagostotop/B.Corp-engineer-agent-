@@ -12,19 +12,25 @@ flask-cors==4.0.1
 # AI + Search + Embeddings
 groq==0.11.0
 tavily-python==0.5.1
-sentence-transformers==3.0.1  # This pulls torch automatically
-numpy==1.26.4                
+sentence-transformers==3.0.1
+torch==2.3.1 # BUG FIX: Pin torch. Without this, it installs CPU + CUDA 300MB
+numpy==1.26.4 
+
+# JWT + Auth - BUG FIX #1 from v5.2.6
+pyjwt[crypto]==2.9.0 # CRITICAL: [crypto] for PyJWK ES256/RS256 support
 
 # Database + Memory
 supabase==2.7.0
 python-dotenv==1.0.1
-psycopg2-binary==2.9.9        # For Supabase + pgvector
+psycopg2-binary==2.9.9 
 
 # File Processing
 PyPDF2==3.0.1
-python-docx==1.1.2           
+python-docx==1.1.2 
 pillow==10.4.0
 python-multipart==0.0.9
+python-magic==0.4.27 # CRITICAL: For MIME validation. Requires libmagic1 on system
+python-magic-bin==0.4.14 # Windows dev only. Remove in prod
 
 # Utilities
 requests==2.32.3
