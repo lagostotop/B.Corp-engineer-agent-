@@ -8,9 +8,8 @@ const $=id=>document.getElementById(id);
 const API_BASE = "https://b-corp-ai.onrender.com";
 
 // ===== CONFIG: REPLACE THESE 2 =====
-const SUPABASE_URL = "https://YOUR-PROJECT.supabase.co" // <-- PUT YOURS
-const SUPABASE_ANON_KEY = "YOUR-ANON-KEY" // <-- PUT YOURS
-// ===================================
+const SUPABASE_URL = https://fcrdmwtsggbgconqvkjz.supabase.co
+const SUPABASE_ANON_KEY = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZjcmRtd3RzZ2diZ2NvbnF2a2p6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0MDAwMjAsImV4cCI6MjA5NTk3NjAyMH0.o7d6lTABfWaf_5NtPSWLR9qCUJvS_kYL9bI7Z2fSX50
 
 let supabase = null;
 
