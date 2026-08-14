@@ -15,9 +15,7 @@ python-docx==1.1.2
 pillow==10.4.0
 python-multipart==0.0.9
 requests==2.32.3
-
-# FIX 1: File type detection. Your logs said "python-magic not available"
-python-magic-bin==0.4.16
-
-# FIX 2: For SSE streaming
 sse-starlette==2.2.1
+
+# FIX 1: Use python-magic for Linux, not -bin
+python-magic==0.4.27
