@@ -1,15 +1,15 @@
 /* =========================================================
-   BRAIN 3.0 SERVICE WORKER v2.0
+   BRAIN 3.0 SERVICE WORKER v5.5.5
    Production PWA with Network-First API
    ========================================================= */
 
-const CACHE_NAME = 'brain3-cache-v5'; // bumped to force update
+const CACHE_NAME = 'brain3-cache-v5-5-5'; // BUMPED for this deploy
 const STATIC_CACHE = [
   '/',
-  '/static/manifest.json?v=79',
-  '/static/app.js?v=79',
+  '/static/manifest.json?v=5-5-5', // Match your version
+  '/static/app.js?v=5-5-5',        // Match your version
   '/static/brain3d.png',
-  '/static/icon-180.png',
+  '/static/icon-180.png', 
   '/static/icon-192.png', 
   '/static/icon-512.png'
 ];
@@ -35,7 +35,7 @@ self.addEventListener('activate', event => {
     })
   );
   self.clients.claim();
-  console.log('Brain 3.0 SW: Activated');
+  console.log('Brain 3.0 SW: Activated v5.5.5');
 });
 
 // FETCH - Smart strategy
@@ -45,20 +45,20 @@ self.addEventListener('fetch', event => {
   // 1. NEVER CACHE: API, POST, CDN, Supabase, Fonts
   if (
     event.request.method !== 'GET' ||
-    url.pathname.startsWith('/api/') || // blocks /api/chat, /api/chats, /api/chat/123
+    url.pathname.startsWith('/api/') || 
     url.hostname.includes('supabase') ||
     url.hostname.includes('cdn.jsdelivr') ||
     url.hostname.includes('fonts.googleapis') ||
     url.hostname.includes('fonts.gstatic')
   ) {
-    return; // let browser handle it - network only
+    return; // network only - IMPORTANT for auth
   }
 
   // 2. HTML PAGES: Network first, fallback to cache
   if (event.request.mode === 'navigate' || event.request.headers.get('accept')?.includes('text/html')) {
     event.respondWith(
       fetch(event.request)
-        .catch(() => caches.match('/')) // offline fallback
+        .catch(() => caches.match('/')) 
     );
     return;
   }
@@ -75,7 +75,7 @@ self.addEventListener('fetch', event => {
             });
           }
           return response;
-        });
+        }).catch(() => cached); // offline fallback
         return cached || fetchPromise;
       })
   );
