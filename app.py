@@ -416,8 +416,50 @@ def ask():
     if file:fcontent,extracted_text,has_img,img_url,attach=process_uploaded_file(file,uid,cid);q+=fcontent
     hist=load_messages(cid,uid)
 
-    context_blocks=[]
-    if needs_tools(q,has_img): 
+        context_blocks=[]
+    if needs_tools(q,has_img):
         plan=generate_plan(q)
+        for step in plan:
+            tool_res=call_tool(step["action"],{"query":step["query"]},uid,cid)
+            if tool_res.get("success"):
+                if "results" in tool_res:
+                    context_blocks.extend([f"[SOURCE {i}]\nTitle: {r['title']}\nURL: {r['url']}\nContent: {r['content']}" for i,r in enumerate(tool_res["results"],1)])
+                else:
+                    context_blocks.append(tool_res["text"])
+            else:
+                logger.warning(f"Tool {step['action']} failed: {tool_res.get('error')}")
+
+    if extracted_text: context_blocks.append(f"UPLOADED FILE CONTENT:\n{extracted_text}")
+    context_str="\n\n".join(context_blocks)[:MAX_TOOL_CONTEXT_CHARS]
+
+    def stream():
+        full="";start=time.time()
+        try:
+            msgs=[{"role":"system","content":SYSTEM_PROMPT}]
+            if context_str:msgs.append({"role":"system","content":f"CONTEXT:\n{context_str}"})
+            msgs+=[{"role":m["role"],"content":m["content"]}for m in hist]
+            um={"role":"user","content":q}
+            if has_img:um["content"]=[{"type":"text","text":q},{"type":"image_url","image_url":{"url":img_url}}]
+            msgs.append(um)
+
+            router = ModelRouter(supabase)
+            groq_response = router.route(msgs, uid, cid, has_image=has_img, stream=True)
+
+            for chunk in groq_response:
+                if time.time()-start>GENERATION_TIMEOUT:break
+                if d:=chunk.choices[0].delta.content:full+=d;yield f"event: token\ndata: {json.dumps({'text':d})}\n\n"
+            yield f"event: done\ndata: {json.dumps({'chat_id':cid})}\n\n"
+        except Exception as e:log.exception("Stream");yield f"event: error\ndata: {json.dumps({'message':'Server error'})}\n\n"
+        finally:
+            if full:
+                try:save_message(cid,uid,"assistant",full[:MAX_SAVED_RESPONSE_CHARS],None,None,"completed")
+                except Exception:log.exception("Failed to save assistant response")
+            else:
+                try:save_message(cid,uid,"assistant","**Error**: Failed to generate response",None,None,"failed")
+                except Exception:log.exception("Failed to save error state")
+    return Response(stream_with_context(stream()),mimetype="text/event-stream",headers={"Cache-Control":"no-cache","Connection":"keep-alive"})
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000)
       
    
