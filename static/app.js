@@ -254,5 +254,32 @@ async function sendMessage(q = null, regen = false) {
         resetAttachment();
         ai = addMessage("ai", "");
         controller = new AbortController();
-        log("Sending to /api/chat", {  in chat_id: currentChatId })
-        
+        log("Sending to /api/chat", { chat_id: currentChatId })
+            const r = await fetch(`${API_BASE}/api/chat`, { method: "POST", headers: { "Authorization": `Bearer ${authToken}`, "Accept": "text/event-stream" }, body: fd, signal: controller.signal, cache: "no-store" });
+        if (r.status === 401) { doLogout(); throw new Error("Session expired. Please login again."); }
+        if (r.status === 403) throw new Error("Forbidden");
+        if (r.status === 409) throw new Error("Duplicate message");
+        if (!r.ok) throw new Error(`Server ${r.status}`);
+        if (!r.body) throw new Error("No stream");
+        const reader = r.body.getReader(), decoder = new TextDecoder(); let buf = "", full = "";
+        function processEV(ev) {
+            if (!ev.trim()) return; let evn = "message", data = [];
+            ev.split(/\r?\n/).forEach(l => { if (!l || l[0] === ":") return; if (l.startsWith("event:")) evn = l.slice(6).trim(); else if (l.startsWith("data:")) data.push(l.slice(5).replace(/^ /, "")) });
+            if (!data.length) return; let payload; try { payload = JSON.parse(data.join("\n")) } catch { return }
+            switch (evn) {
+                case "token": const t = payload?.text?? ""; if (t) { full += t; ai?.querySelector(".msg-content") && (ai.querySelector(".msg-content").innerHTML = renderAI(full)); scrollChatToBottom() } break;
+                case "chat_id": if (payload?.chat_id) { currentChatId = payload.chat_id; log("New chat_id:", currentChatId) } break;
+                case "done": if (payload?.chat_id) currentChatId = payload.chat_id; loadSidebar(); break;
+                case "error": throw new Error(payload?.message || "Error")
+            }
+        }
+        while (true) {
+            const { value, done } = await reader.read();
+            if (done) { buf += decoder.decode(); if (buf.trim()) processEV(buf); break }
+            buf += decoder.decode(value, { stream: true }); buf = buf.replace(/\r\n/g, "\n"); const parts = buf.split("\n\n"); buf = parts.pop() || ""; parts.forEach(processEV);
+        }
+    } catch (e) {
+        if (e.name === "AbortError") { ai?.querySelector(".msg-content") && (ai.querySelector(".msg-content").innerHTML = "<i>*Stopped*</i>"); return }
+        console.error(e); ai?.querySelector(".msg-content") && (ai.querySelector(".msg-content").innerHTML = renderAI(`**Error**\n\n${e.message}`))
+    } finally { setSendingState(false); isSending = false; controller = null }
+    }
