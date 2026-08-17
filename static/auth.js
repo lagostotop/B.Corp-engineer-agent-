@@ -90,3 +90,6 @@ window.doSignup = doSignup;
 window.doLogout = doLogout;
 window.userId = () => userId;
 window.authToken = () => authToken;
+
+// Auto-start auth when file loads
+document.addEventListener("DOMContentLoaded", initAuth);
