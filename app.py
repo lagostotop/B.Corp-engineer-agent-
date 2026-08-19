@@ -113,7 +113,7 @@ CORS(
 
 supabase: Client = create_client(
     os.environ["SUPABASE_URL"],
-    os.environ["SUPABASE_KEY"],
+    os.environ["SUPABASE_SECRET_KEY"],
 )
 
 router = ModelRouter(supabase)
