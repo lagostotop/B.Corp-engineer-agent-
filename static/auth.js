@@ -8,7 +8,7 @@ let supabase = null;
 window.$ = id => document.getElementById(id);
 
 const SUPABASE_URL = "https://fcrdmwtsggbgconqvkjz.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZjcmRtd3NnZ2diY29ucXZranp6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0MDAwMjAsImV4cCI6MjA5NTk3NjAyMH0.o7d6lTABfWaf_5NtPSWLR9qCUJvS_kYL9bI7Z2fSX50";
+const SUPABASE_PUBLISHABLE_KEY = "3tg-cgQ1_TH76WwrFxljQA_ygT2eyY0";
 
 function debug(...args) {
     if (DEBUG) {
