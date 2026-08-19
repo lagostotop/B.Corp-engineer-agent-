@@ -34,7 +34,7 @@ from brain_core import (
 
 REQUIRED_ENV = (
     "SUPABASE_URL",
-    "SUPABASE_KEY",
+    "SUPABASE_SECRET_KEY",
     "GROQ_API_KEY",
 )
 
