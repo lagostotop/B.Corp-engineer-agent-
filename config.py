@@ -24,10 +24,10 @@ class Config:
     SUPABASE_URL = os.getenv("SUPABASE_URL")
 
     # SERVER ONLY - Never send this to the browser.
-    SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+    SUPABASE_SECRET_KEY = os.getenv("SUPABASE_SECRET_KEY")
 
     # Public/browser key
-    SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY")
+    SUPABASE_PUBLISHABLE_KEY = os.getenv("SUPABASE_PUBLISHABLE_KEY")
 
     # =========================
     # SERVER
