@@ -475,6 +475,14 @@ def chat():
             status=401,
         )
 
+    @app.route("/debug/env")
+def debug_env():
+    return jsonify({
+        "has_url": bool(os.getenv("SUPABASE_URL")),
+        "key_prefix": os.getenv("SUPABASE_SECRET_KEY", "")[:10],
+        "key_len": len(os.getenv("SUPABASE_SECRET_KEY", ""))
+    })
+
     question = request.form.get(
         "question",
         "",
