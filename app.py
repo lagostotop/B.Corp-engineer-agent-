@@ -72,8 +72,6 @@ SUPABASE_SECRET_KEY = os.environ["SUPABASE_SECRET_KEY"]
 if not SUPABASE_SECRET_KEY.startswith("sb_secret_"):
     raise RuntimeError("SUPABASE_SECRET_KEY must be an sb_secret_ key")
 
-from supabase import create_client, Client, ClientOptions
-
 supabase: Client = create_client(
     SUPABASE_URL,
     SUPABASE_SECRET_KEY,
