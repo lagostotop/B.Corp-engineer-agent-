@@ -1,9 +1,7 @@
 "use strict";
 
-let userId = null;
-let authToken = null;
-let DEBUG = true;
-let supabase = null;
+let userId = null, authToken = null, supabase = null;
+const DEBUG = true;
 
 window.$ = id => document.getElementById(id);
 
@@ -11,63 +9,46 @@ const SUPABASE_URL = "https://fcrdmwtsggbgconqvkjz.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "3tg-cgQ1_TH76WwrFxljQA_ygT2eyY0";
 
 function debug(...args) {
-    if (DEBUG) {
-        console.log(
-            "%c[Brain4.0 Auth]",
-            "color:#00BFFF;font-weight:bold",
-            ...args
-        );
-    }
+    if (DEBUG) console.log("%c[Brain 3.0 Auth]", "color:#00BFFF;font-weight:bold", ...args);
 }
 
 function setAuthStatus(text) {
-    const el = window.$("authStatus");
-    if (el) el.textContent = text;
+    const el = $("authStatus");
+    if (el) el.textContent = text || "";
 }
 
-function showAuthError(message, isSuccess = false) {
-    const el = window.$("authError");
+function showAuthError(message, success = false) {
+    const el = $("authError");
     if (!el) return;
-
-    el.style.color = isSuccess ? "#22c55e" : "#ef4444";
-    el.textContent = message;
+    el.textContent = message || "";
+    el.style.color = success ? "#22c55e" : "#ef4444";
 }
 
 function showAuthScreen() {
-    const authScreen = window.$("authScreen");
-    const chatContainer = window.$("chatContainer");
-
-    if (authScreen) authScreen.style.display = "flex";
-    if (chatContainer) chatContainer.style.display = "none";
+    const auth = $("authScreen"), chat = $("chatContainer");
+    if (auth) auth.style.display = "flex";
+    if (chat) chat.style.display = "none";
 }
 
 function showChatScreen() {
-    const authScreen = window.$("authScreen");
-    const chatContainer = window.$("chatContainer");
-
-    if (authScreen) authScreen.style.display = "none";
-    if (chatContainer) chatContainer.style.display = "block";
-
+    const auth = $("authScreen"), chat = $("chatContainer");
+    if (auth) auth.style.display = "none";
+    if (chat) chat.style.display = "block";
     debug("Chat screen displayed");
-
-    if (typeof window.loadSidebar === "function") {
-        window.loadSidebar();
-    }
+    if (typeof window.loadSidebar === "function") window.loadSidebar();
 }
 
 async function initAuth() {
     try {
         setAuthStatus("Loading authentication...");
 
-        if (!window.supabase) {
-            throw new Error(
-                "Supabase SDK did not load. Check the CDN."
-            );
+        if (!window.supabase?.createClient) {
+            throw new Error("Supabase SDK did not load. Check the CDN.");
         }
 
         supabase = window.supabase.createClient(
             SUPABASE_URL,
-            SUPABASE_ANON_KEY,
+            SUPABASE_PUBLISHABLE_KEY,
             {
                 auth: {
                     autoRefreshToken: true,
@@ -79,54 +60,36 @@ async function initAuth() {
 
         debug("Supabase initialized");
 
-        supabase.auth.onAuthStateChange(
-            (event, session) => {
-                authToken = session?.access_token || null;
-                userId = session?.user?.id || null;
+        supabase.auth.onAuthStateChange((event, session) => {
+            authToken = session?.access_token || null;
+            userId = session?.user?.id || null;
 
-                debug(
-                    "Auth state:",
-                    event,
-                    userId
-                );
+            debug("Auth state:", event, userId);
 
-                if (session) {
-                    setAuthStatus("Authenticated");
-                    showChatScreen();
-                }
-
-                if (event === "SIGNED_OUT") {
-                    authToken = null;
-                    userId = null;
-                    showAuthScreen();
-                }
+            if (session) {
+                setAuthStatus("Authenticated");
+                showChatScreen();
+            } else if (event === "SIGNED_OUT") {
+                authToken = null;
+                userId = null;
+                setAuthStatus("");
+                showAuthScreen();
             }
-        );
-
-        setAuthStatus("Checking session...");
+        });
 
         const token = await getAuthToken();
 
         if (token) {
-            debug("Existing session found");
             setAuthStatus("Authenticated");
             showChatScreen();
         } else {
-            debug("No active session");
             setAuthStatus("");
             showAuthScreen();
         }
     } catch (error) {
-        console.error(
-            "AUTH INIT FAILED:",
-            error
-        );
-
-        setAuthStatus(
-            "Authentication error: " +
-            (error?.message || "Unknown error")
-        );
-
+        console.error("AUTH INIT FAILED:", error);
+        setAuthStatus("Authentication error");
+        showAuthError(error?.message || "Authentication failed.");
         showAuthScreen();
     }
 }
@@ -135,250 +98,148 @@ async function getAuthToken() {
     if (!supabase) return null;
 
     try {
-        const {
-            data,
-            error
-        } = await supabase.auth.getSession();
+        const { data, error } = await supabase.auth.getSession();
 
-        if (error) {
-            console.error(
-                "getSession error:",
-                error
-            );
-            return null;
-        }
+        if (error) throw error;
 
-        authToken =
-            data?.session?.access_token || null;
+        const session = data?.session;
 
-        userId =
-            data?.session?.user?.id || null;
+        authToken = session?.access_token || null;
+        userId = session?.user?.id || null;
 
         return authToken;
     } catch (error) {
-        console.error(
-            "getAuthToken error:",
-            error
-        );
-
+        console.error("getAuthToken:", error);
+        authToken = null;
+        userId = null;
         return null;
     }
 }
 
 function getAuthHeaders() {
-    const headers = {
-        "Accept": "application/json"
-    };
-
-    if (authToken) {
-        headers.Authorization =
-            `Bearer ${authToken}`;
-    }
-
+    const headers = { Accept: "application/json" };
+    if (authToken) headers.Authorization = `Bearer ${authToken}`;
     return headers;
 }
 
 async function doLogin() {
-    const emailInput = window.$("emailInput");
-    const passwordInput = window.$("passwordInput");
-    const btn = window.$("loginBtn");
-
-    if (!emailInput || !passwordInput || !btn) {
-        console.error(
-            "Login elements not found"
-        );
-        return;
-    }
-
-    const email = emailInput.value.trim();
-    const password = passwordInput.value;
+    const email = $("emailInput")?.value.trim();
+    const password = $("passwordInput")?.value;
+    const btn = $("loginBtn");
 
     if (!email || !password) {
-        showAuthError(
-            "Enter email and password."
-        );
+        showAuthError("Enter email and password.");
         return;
     }
 
     if (!supabase) {
-        showAuthError(
-            "Authentication is not initialized."
-        );
+        showAuthError("Authentication is not initialized.");
         return;
     }
 
-    btn.disabled = true;
-    btn.textContent = "Signing in...";
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = "Signing in...";
+    }
+
     showAuthError("");
 
     try {
-        debug("Attempting login:", email);
-
-        const {
-            data,
-            error
-        } = await supabase.auth.signInWithPassword({
+        const { data, error } = await supabase.auth.signInWithPassword({
             email,
             password
         });
 
-        if (error) {
-            throw error;
-        }
+        if (error) throw error;
+        if (!data?.session) throw new Error("Login failed. No session returned.");
 
-        if (!data?.session) {
-            throw new Error(
-                "Login failed. No session returned."
-            );
-        }
+        authToken = data.session.access_token;
+        userId = data.session.user?.id || null;
 
-        authToken =
-            data.session.access_token;
-
-        userId =
-            data.session.user?.id || null;
-
-        debug(
-            "Login successful:",
-            userId
-        );
-
-        showAuthError(
-            "Login successful!",
-            true
-        );
-
+        debug("Login successful:", userId);
+        showAuthError("Login successful!", true);
         showChatScreen();
     } catch (error) {
-        console.error(
-            "Login error:",
-            error
-        );
-
-        showAuthError(
-            error?.message ||
-            "Login failed."
-        );
+        console.error("Login error:", error);
+        showAuthError(error?.message || "Login failed.");
     } finally {
-        btn.disabled = false;
-        btn.textContent = "Sign In";
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = "Sign In";
+        }
     }
 }
 
 async function doSignup() {
-    const emailInput = window.$("emailInput");
-    const passwordInput = window.$("passwordInput");
-    const btn = window.$("signupBtn");
-
-    if (!emailInput || !passwordInput || !btn) {
-        console.error(
-            "Signup elements not found"
-        );
-        return;
-    }
-
-    const email = emailInput.value.trim();
-    const password = passwordInput.value;
+    const email = $("emailInput")?.value.trim();
+    const password = $("passwordInput")?.value;
+    const btn = $("signupBtn");
 
     if (!email || !password) {
-        showAuthError(
-            "Enter email and password."
-        );
+        showAuthError("Enter email and password.");
         return;
     }
 
     if (password.length < 6) {
-        showAuthError(
-            "Password must be at least 6 characters."
-        );
+        showAuthError("Password must be at least 6 characters.");
         return;
     }
 
     if (!supabase) {
-        showAuthError(
-            "Authentication is not initialized."
-        );
+        showAuthError("Authentication is not initialized.");
         return;
     }
 
-    btn.disabled = true;
-    btn.textContent = "Creating account...";
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = "Creating account...";
+    }
+
     showAuthError("");
 
     try {
-        debug("Creating account:", email);
-
-        const {
-            data,
-            error
-        } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
             email,
             password,
             options: {
-                emailRedirectTo:
-                    window.location.origin
+                emailRedirectTo: window.location.origin
             }
         });
 
-        if (error) {
-            throw error;
-        }
+        if (error) throw error;
 
-        if (data?.user && !data?.session) {
+        if (data?.session) {
+            authToken = data.session.access_token;
+            userId = data.session.user?.id || null;
+            showAuthError("Account created. You are now logged in.", true);
+            showChatScreen();
+        } else {
             showAuthError(
                 "Account created. Check your email to verify your account.",
                 true
             );
-        } else if (data?.session) {
-            authToken =
-                data.session.access_token;
-
-            userId =
-                data.session.user?.id || null;
-
-            showAuthError(
-                "Account created. You are now logged in.",
-                true
-            );
-
-            showChatScreen();
-        } else {
-            showAuthError(
-                "Account created. Check your email.",
-                true
-            );
         }
     } catch (error) {
-        console.error(
-            "Signup error:",
-            error
-        );
-
-        showAuthError(
-            error?.message ||
-            "Signup failed."
-        );
+        console.error("Signup error:", error);
+        showAuthError(error?.message || "Signup failed.");
     } finally {
-        btn.disabled = false;
-        btn.textContent = "Create Account";
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = "Create Account";
+        }
     }
 }
 
 async function doLogout() {
     try {
-        if (supabase) {
-            await supabase.auth.signOut();
-        }
+        if (supabase) await supabase.auth.signOut();
     } catch (error) {
-        console.error(
-            "Logout error:",
-            error
-        );
+        console.error("Logout error:", error);
     }
 
     authToken = null;
     userId = null;
-
+    setAuthStatus("");
     showAuthScreen();
 }
 
@@ -393,55 +254,18 @@ window.userId = () => userId;
 window.authToken = () => authToken;
 window.initAuth = initAuth;
 
-document.addEventListener(
-    "DOMContentLoaded",
-    () => {
-        const loginBtn = window.$("loginBtn");
-        const signupBtn = window.$("signupBtn");
-        const logoutBtn = window.$("logoutBtn");
+document.addEventListener("DOMContentLoaded", () => {
+    $("loginBtn")?.addEventListener("click", doLogin);
+    $("signupBtn")?.addEventListener("click", doSignup);
+    $("logoutBtn")?.addEventListener("click", doLogout);
 
-        if (loginBtn) {
-            loginBtn.addEventListener(
-                "click",
-                doLogin
-            );
+    $("passwordInput")?.addEventListener("keydown", event => {
+        if (event.key === "Enter") {
+            event.preventDefault();
+            doLogin();
         }
+    });
 
-        if (signupBtn) {
-            signupBtn.addEventListener(
-                "click",
-                doSignup
-            );
-        }
-
-        if (logoutBtn) {
-            logoutBtn.addEventListener(
-                "click",
-                doLogout
-            );
-        }
-
-        const passwordInput =
-            window.$("passwordInput");
-
-        if (passwordInput) {
-            passwordInput.addEventListener(
-                "keydown",
-                event => {
-                    if (
-                        event.key === "Enter"
-                    ) {
-                        event.preventDefault();
-                        doLogin();
-                    }
-                }
-            );
-        }
-
-        debug(
-            "Auth event listeners attached"
-        );
-
-        initAuth();
-    }
-);
+    debug("Auth initialized");
+    initAuth();
+});
