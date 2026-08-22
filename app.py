@@ -5,8 +5,7 @@ from flask import Flask, request, Response, jsonify, send_from_directory, g, str
 from flask_cors import CORS
 from werkzeug.exceptions import HTTPException, RequestEntityTooLarge
 from werkzeug.utils import secure_filename
-from supabase import create_client, Client
-from supabase.client import ClientOptions
+from supabase import create_client, Client, ClientOptions
 
 from brain_core import (
     ModelRouter,
