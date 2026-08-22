@@ -9,7 +9,7 @@ groq==0.13.1
 tavily-python==0.5.1
 
 # DB + Auth
-supabase>=2.7.0
+supabase>=2.5.2
 psycopg2-binary==2.9.9
 pyjwt[crypto]==2.9.0
 
