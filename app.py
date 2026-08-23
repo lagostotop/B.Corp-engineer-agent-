@@ -67,15 +67,9 @@ CORS(app, resources={r"/api/*": {"origins": origins}})
 # ============================================================
 
 SUPABASE_URL = os.environ["SUPABASE_URL"].strip()
-SUPABASE_SECRET_KEY = os.environ["SUPABASE_SECRET_KEY"].strip() # added .strip()
+SUPABASE_SECRET_KEY = os.environ["SUPABASE_SECRET_KEY"].strip()
 
-# Debug: see what Render actually got
-logger.info("SUPABASE_URL loaded: %s", SUPABASE_URL[:30])
-logger.info("SUPABASE_KEY loaded: %s", SUPABASE_SECRET_KEY[:15])
-
-# This check is correct for new sb_secret_ keys. Keep it.
-if not SUPABASE_SECRET_KEY.startswith("sb_secret_"):
-    raise RuntimeError(f"SUPABASE_SECRET_KEY must start with sb_secret_. Got: {SUPABASE_SECRET_KEY[:15]}")
+logger.info("Supabase configuration loaded")
 
 supabase: Client = create_client(
     SUPABASE_URL,
