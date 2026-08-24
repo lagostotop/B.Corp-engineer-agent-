@@ -1,306 +1,470 @@
 "use strict";
-const M = typeof window.marked!== "undefined", P = typeof window.DOMPurify!== "undefined";
-if (M) {
-    try { window.marked.setOptions({ breaks: true, gfm: true, sanitize: false }) }
-    catch (e) { console.warn("marked error", e) }
-} else {
-    console.warn("marked missing")
+
+const $=id=>document.getElementById(id);
+const API="";
+const M=!!window.marked,P=!!window.DOMPurify;
+
+let sending=false,file=null,controller=null,currentChatId=null,lastQuestion="";
+
+document.addEventListener("DOMContentLoaded",async()=>{
+  events();
+  try{await window.initAuth?.()}catch(e){console.error(e)}
+});
+
+function auth(){return window.authToken?.()||""}
+function headers(json=false){
+  return {...(json?{"Content-Type":"application/json"}:{}),...window.getAuthHeaders?.()};
 }
-if (!P) console.error("DOMPurify missing. XSS risk!");
 
-let isSending = false, selectedFile = null, lastQuestion = "", controller = null, currentChatId = null, introShown = false;
-const API_BASE = ""; // Same domain
-const DEBUG = true;
+function showAuthScreen(){
+  $("authScreen").style.display="flex";
+  $("chatContainer").style.display="none";
+}
 
-function debug(...args){ if(DEBUG) console.log("%c[Brain4.0 App]","color:#00BFFF;font-weight:bold",...args) }
+function showChatScreen(){
+  $("authScreen").style.display="none";
+  $("chatContainer").style.display="flex";
+  loadChats();
+}
 
-function createUUID() {
-    if (typeof crypto!== "undefined" && crypto.randomUUID) return crypto.randomUUID();
-    if (typeof crypto!== "undefined" && crypto.getRandomValues) {
-        const b = new Uint8Array(16);
-        crypto.getRandomValues(b);
-        b[6] = b[6] & 15 | 64;
-        b[8] = b[8] & 63 | 128;
-        return [...b].map(x => x.toString(16).padStart(2, "0")).join("").replace(/(\w{8})(\w{4})(\w{4})(\w{4})(\w{12})/, "$1-$2-$3-$4-$5")
+window.showAuthScreen=showAuthScreen;
+window.showChatScreen=showChatScreen;
+
+function events(){
+  $("uploadBtn")?.addEventListener("click",()=>$("fileInput")?.click());
+  $("fileInput")?.addEventListener("change",e=>{
+    file=e.target.files?.[0]||null;
+    $("filePreview").style.display=file?"flex":"none";
+    $("fileName").textContent=file?.name||"";
+  });
+
+  $("removeFileBtn")?.addEventListener("click",clearFile);
+  $("newChatBtn")?.addEventListener("click",newChat);
+  $("logoutBtn")?.addEventListener("click",window.doLogout);
+  $("loginBtn")?.addEventListener("click",window.doLogin);
+  $("signupBtn")?.addEventListener("click",window.doSignup);
+
+  $("hamburgerBtn")?.addEventListener("click",()=>toggleSide(true));
+  $("closeSidebarBtn")?.addEventListener("click",()=>toggleSide(false));
+  $("sidebarOverlay")?.addEventListener("click",()=>toggleSide(false));
+
+  $("stopBtn")?.addEventListener("click",stop);
+  $("regenBtn")?.addEventListener("click",()=>lastQuestion&&!sending&&send(lastQuestion,true));
+
+  $("chatForm")?.addEventListener("submit",e=>{
+    e.preventDefault();
+    send();
+  });
+
+  $("userInput")?.addEventListener("input",autoGrow);
+  $("userInput")?.addEventListener("keydown",e=>{
+    if(e.key==="Enter"&&!e.shiftKey&&!e.isComposing){
+      e.preventDefault();
+      send();
     }
-    throw new Error("No UUID")
+  });
+
+  document.querySelectorAll(".welcome-chip").forEach(x=>{
+    x.addEventListener("click",()=>{
+      $("userInput").value=x.dataset.prompt||"";
+      $("userInput").focus();
+      autoGrow();
+    });
+  });
+
+  window.addEventListener("resize",()=>{
+    if(innerWidth>=769) toggleSide(false);
+  });
 }
 
-document.addEventListener("DOMContentLoaded", initializeApp);
-
-async function initializeApp() {
-    try {
-        debug("initializeApp started");
-        initEvents();
-        if (window.initAuth) { await window.initAuth(); }
-    } catch (error) { console.error("App initialization failed:", error) }
+function toggleSide(show){
+  $("sidebar")?.classList.toggle("show",show);
+  $("sidebarOverlay")?.classList.toggle("show",show&&innerWidth<769);
 }
 
-function showAuthScreen() { window.$("authScreen").style.display = "flex"; window.$("chatContainer").style.display = "none" }
-function showChatScreen() { window.$("authScreen").style.display = "none"; window.$("chatContainer").style.display = "flex"; loadSidebar(); showIntroduction() }
-window.showAuthScreen = showAuthScreen;
-window.showChatScreen = showChatScreen;
-
-function initEvents() {
-    window.$("uploadBtn")?.addEventListener("click", () => window.$("fileInput")?.click());
-    window.$("newChatBtn")?.addEventListener("click", newChat);
-    window.$("hamburgerBtn")?.addEventListener("click", toggleSidebar);
-    window.$("closeSidebarBtn")?.addEventListener("click", closeSidebar);
-    window.$("sidebarOverlay")?.addEventListener("click", closeSidebar);
-    window.$("fileInput")?.addEventListener("change", handleFileSelect);
-    window.$("stopBtn")?.addEventListener("click", stopGeneration);
-    window.$("regenBtn")?.addEventListener("click", () => { if (lastQuestion &&!isSending) sendMessage(lastQuestion, true) });
-    window.$("chatForm")?.addEventListener("submit", e => { e.preventDefault(); sendMessage() });
-    window.$("userInput")?.addEventListener("input", e => { e.target.style.height = "auto"; e.target.style.height = Math.min(e.target.scrollHeight, 200) + "px" });
-    window.$("userInput")?.addEventListener("keydown", e => { if (e.key === "Enter" &&!e.shiftKey &&!e.isComposing) { e.preventDefault(); sendMessage() } });
-    document.addEventListener("keydown", e => { if (e.key === "Escape") closeSidebar() });
-    window.addEventListener("resize", handleResize);
-    window.$("loginBtn")?.addEventListener("click", window.doLogin);
-    window.$("signupBtn")?.addEventListener("click", window.doSignup);
-    window.$("logoutBtn")?.addEventListener("click", window.doLogout)
+function autoGrow(){
+  const x=$("userInput");
+  x.style.height="auto";
+  x.style.height=Math.min(x.scrollHeight,180)+"px";
 }
 
-function handleResize() { if (window.innerWidth >= 769) closeSidebar(); updateOverlay() }
-function showIntroduction() {
-    if (introShown) return;
-    introShown = true;
-    addMessage("ai", "### Welcome to Brain 4.0 by B.CORP\nI'm your AI OS for 2026. I use autonomous agents + 4-tier routing:\n\n- **⚡ Fast**: Hi/Thanks → Llama 8B Instant\n- **🎯 General**: Normal chat → Llama 3.3 70B\n- **🧠 Reasoning**: Coding/Strategy → GPT-OSS 120B\n- **👁️ Vision**: Images/PDFs → Llama 4 Scout\nI can also: Research, Remember things, Search your docs.\n---\nWhat would you like to build today?")
-}
-function toggleSidebar() { window.$("sidebar")?.classList.toggle("show"); updateOverlay() }
-function closeSidebar() { window.$("sidebar")?.classList.remove("show"); updateOverlay() }
-function updateOverlay() { const s = window.$("sidebar"), o = window.$("sidebarOverlay"); if (!s ||!o) return; o.classList.toggle("show", s.classList.contains("show") && window.innerWidth < 769) }
-
-async function loadSidebar() {
-    const list = window.$("chatList"); if (!list) return; if (!window.authToken()) return;
-    debug("Loading sidebar");
-    try {
-        const r = await fetch(`${API_BASE}/api/chats`, { method: "GET", headers: window.getAuthHeaders(), cache: "no-store" });
-        if (r.status === 401) { alert("Session expired"); window.doLogout(); return }
-        if (!r.ok) return;
-        const chats = await r.json();
-        list.innerHTML = "";
-        if (!Array.isArray(chats) ||!chats.length) { list.innerHTML = '<div style="color:#64748b;font-size:13px;padding:12px;text-align:center">No recent chats</div>'; return }
-        chats.forEach(c => {
-            if (c == null || c.id == null) return;
-            const item = document.createElement("div");
-            item.className = `chat-item${String(c.id) === String(currentChatId)? " active" : ""}`;
-            const t = document.createElement("span"); t.textContent = c.title || "New conversation"; t.title = t.textContent;
-            const d = document.createElement("button"); d.type = "button"; d.className = "chat-delete"; d.textContent = "✕"; d.setAttribute("aria-label", "Delete chat");
-            t.onclick = e => { e.stopPropagation(); loadChat(c.id) };
-            d.onclick = e => { e.stopPropagation(); deleteChat(c.id) };
-            item.append(t, d); item.onclick = () => loadChat(c.id); list.append(item)
-        })
-    } catch (e) { console.error(e) }
+function clearFile(){
+  file=null;
+  if($("fileInput"))$("fileInput").value="";
+  $("filePreview").style.display="none";
+  $("fileName").textContent="";
 }
 
-async function newChat() {
-    debug("New chat");
-    if (isSending && controller) controller.abort();
-    controller = null; isSending = false; currentChatId = lastQuestion = null; introShown = false;
-    window.$("chatBox") && (window.$("chatBox").innerHTML = ""); resetAttachment(); setSendingState(false);
-    showIntroduction(); if (window.innerWidth < 769) closeSidebar(); await loadSidebar()
+function uuid(){
+  if(crypto.randomUUID)return crypto.randomUUID();
+  return"xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g,c=>{
+    const r=Math.random()*16|0,v=c==="x"?r:r&3|8;
+    return v.toString(16);
+  });
 }
 
-async function loadChat(id) {
-    if (!id || isSending) return;
-    debug("Loading chat:", id);
-    try {
-        const r = await fetch(`${API_BASE}/api/chat/${encodeURIComponent(id)}`, { method: "GET", headers: window.getAuthHeaders(), cache: "no-store" });
-        if (r.status === 401) { alert("Session expired"); window.doLogout(); return }
-        if (r.status === 403) { alert("Access denied"); return }
-        if (!r.ok) throw new Error(`Server ${r.status}`);
-        const msgs = await r.json();
-        currentChatId = id;
-        const box = window.$("chatBox"); if (!box) return;
-        box.innerHTML = ""; introShown = true;
-        if (!Array.isArray(msgs) ||!msgs.length) { introShown = false; showIntroduction() }
-        else msgs.forEach(m => { if (!m ||!m.role) return; const role = m.role === "assistant"? "ai" : m.role === "user"? "user" : null; if (role) addMessage(role, m.content || "", m.created_at) });
-        if (window.innerWidth < 769) closeSidebar(); await loadSidebar()
-    } catch (e) { console.error(e) }
-}
+async function loadChats(){
+  if(!auth())return;
+  try{
+    const r=await fetch(`${API}/api/chats`,{
+      headers:headers(),cache:"no-store"
+    });
+    if(r.status===401)return window.doLogout?.();
+    if(!r.ok)return;
 
-async function deleteChat(id) {
-    if (!id) return; if (!confirm("Delete this chat?")) return;
-    debug("Deleting chat:", id);
-    try {
-        const r = await fetch(`${API_BASE}/api/chat/delete`, { method: "POST", headers: { "Content-Type": "application/json",...window.getAuthHeaders() }, body: JSON.stringify({ chat_id: id }) });
-        if (r.status === 401) { alert("Session expired"); window.doLogout(); return }
-        if (r.status === 403) { alert("Access denied"); return }
-        if (!r.ok) throw new Error(`Server ${r.status}`);
-        String(currentChatId) === String(id)? await newChat() : await loadSidebar()
-    } catch (e) { console.error(e); alert("Delete failed") }
-}
+    const chats=await r.json();
+    const list=$("chatList");
+    list.innerHTML="";
 
-function handleFileSelect(e) { selectedFile = e.target.files?.[0] || null; updateAttachmentButton() }
-function updateAttachmentButton() { const b = window.$("uploadBtn"); if (!b) return; if (selectedFile) { b.textContent = "📎1"; b.title = `Attached: ${selectedFile.name}` } else { b.textContent = "📎"; b.title = "Attach file" } }
-function resetAttachment() { selectedFile = null; const f = window.$("fileInput"); if (f) f.value = ""; updateAttachmentButton() }
-function antiSmash(t) { if (!t) return ""; return String(t).replace(/web_search\s*\{[\s\S]*?\}/gi, "").replace(/save_to_memory\s*\{[\s\S]*?\}/gi, "").replace(/Agent Research Results:[\s\S]*?User Query:/gi, "").trim() }
-function escapeHTML(v) { return String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;"); }
-function safeHttpUrl(v) { try { const u = new URL(v); return u.protocol === "http:" || u.protocol === "https:"? u.href : null } catch { return null } }
-
-function renderAI(text) {
-    try {
-        let clean = antiSmash(text); if (!clean) return "";
-        if (!M ||!P) return `<div style="white-space:pre-wrap">${escapeHTML(clean)}</div>`;
-
-        let banner = "";
-        if (clean.includes("Agent Research Results:")) {
-            banner = '<div class="agent-banner">🧠 Agent Mode: Research + Tools Used</div>';
-            clean = clean.replace("Agent Research Results:", "")
-        }
-
-        let sourcesHTML = "";
-        const m = clean.match(/\*\*Sources\*\s*\n([\s\S]*)$/i);
-        if (m) {
-            const links = [...m[1].matchAll(/\[(\d+)\]\s*\[(.*?)\]\((https?:\/\/[^\s)]+)\)/g)];
-            if (links.length) {
-                sourcesHTML = '<div class="sources"><b>Sources</b>';
-                links.forEach(x => {
-                    const url = safeHttpUrl(x[3]);
-                    if (url) sourcesHTML += `<div class="source-card"><a href="${url}" target="_blank" rel="noopener noreferrer nofollow">[${escapeHTML(x[1])}] ${escapeHTML(x[2])}</a></div>`
-                });
-                sourcesHTML += "</div>";
-                clean = clean.replace(/\*\*Sources\*\*\s*\n([\s\S]*)$/i, "").trim()
-            }
-        }
-        const html = window.marked.parse(clean);
-        const safe = window.DOMPurify.sanitize(html, {
-            ALLOWED_TAGS: ["p", "br", "strong", "em", "del", "h1", "h2", "h3", "h4", "ul", "ol", "li", "blockquote", "pre", "code", "a", "table", "thead", "tbody", "tr", "th", "td"],
-            ALLOWED_ATTR: ["href", "target", "rel"],
-            ALLOW_DATA_ATTR: false
-        });
-        return banner + safe + sourcesHTML
-    } catch (e) { console.error(e); return `<div style="white-space:pre-wrap">${escapeHTML(text)}</div>` }
-}
-
-function getTime() { return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) }
-
-function addMessage(role, text, ts = null) {
-    const box = window.$("chatBox"); if (!box) return null;
-    const wrap = document.createElement("div"); wrap.className = `message-wrap ${role}`;
-    const time = ts? new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : getTime();
-
-    if (role === "ai") {
-        const row = document.createElement("div"); row.className = "message-row";
-        const a = document.createElement("div"); a.className = "message-avatar"; a.innerHTML = '<img src="/static/brain3d.png" alt="Brain">';
-        const m = document.createElement("div"); m.className = "message ai-msg";
-        const ct = document.createElement("div"); ct.className = "msg-content"; ct.innerHTML = renderAI(text);
-        const meta = document.createElement("div"); meta.className = "msg-meta"; meta.textContent = time;
-        m.append(ct, meta); row.append(a, m); wrap.append(row);
-
-        const copyRow = document.createElement("div"); copyRow.className = "copy-row";
-        const c = document.createElement("button"); c.type = "button"; c.className = "copy-btn";
-        c.innerHTML = "📋 Copy";
-        c.onclick = () => copyText(c);
-        copyRow.append(c); wrap.append(copyRow);
-
-        box.append(wrap); scrollChatToBottom(); return ct
-    } else {
-        const row = document.createElement("div"); row.className = "message-row";
-        row.style.justifyContent = "flex-end";
-        const m = document.createElement("div"); m.className = "message user-msg";
-        const ct = document.createElement("div"); ct.className = "msg-content"; ct.textContent = text;
-        const meta = document.createElement("div"); meta.className = "msg-meta"; meta.textContent = `${time} ✓✓`;
-        m.append(ct, meta); row.append(m); wrap.append(row);
+    if(!chats.length){
+      list.innerHTML='<div style="padding:12px;color:#64748b;font-size:12px">No conversations yet</div>';
+      return;
     }
-    box.append(wrap); scrollChatToBottom(); return wrap.querySelector(".msg-content")
+
+    chats.forEach(c=>{
+      if(!c?.id)return;
+
+      const item=document.createElement("div");
+      item.className="chat-item"+(String(c.id)===String(currentChatId)?" active":"");
+
+      const title=document.createElement("span");
+      title.className="chat-item-title";
+      title.textContent=c.title||"New conversation";
+
+      const del=document.createElement("button");
+      del.className="chat-delete";
+      del.type="button";
+      del.textContent="×";
+
+      item.append(title,del);
+      item.onclick=()=>loadChat(c.id);
+      del.onclick=e=>{
+        e.stopPropagation();
+        deleteChat(c.id);
+      };
+
+      list.appendChild(item);
+    });
+  }catch(e){console.error("Chats:",e)}
 }
 
-async function copyText(b) {
-    try {
-        const t = b.closest(".message-wrap")?.querySelector(".msg-content")?.innerText || "";
-        await navigator.clipboard.writeText(t);
-        b.innerHTML = "✓ Copied!";
-        setTimeout(() => b.innerHTML = "📋 Copy", 2000)
-    } catch (e) {
-        b.innerHTML = "✕ Failed";
-        setTimeout(() => b.innerHTML = "📋 Copy", 2000)
+async function loadChat(id){
+  if(!id||sending)return;
+
+  try{
+    const r=await fetch(`${API}/api/chat/${encodeURIComponent(id)}`,{
+      headers:headers(),cache:"no-store"
+    });
+
+    if(r.status===401)return window.doLogout?.();
+    if(!r.ok)throw Error(`Server ${r.status}`);
+
+    const msgs=await r.json();
+    currentChatId=id;
+
+    const box=$("chatBox");
+    box.innerHTML="";
+
+    msgs.forEach(m=>{
+      if(m?.role==="user")addMessage("user",m.content);
+      if(m?.role==="assistant")addMessage("ai",m.content);
+    });
+
+    if(!msgs.length)welcome();
+    await loadChats();
+
+    if(innerWidth<769)toggleSide(false);
+  }catch(e){console.error("Load chat:",e)}
+}
+
+async function newChat(){
+  stop();
+  currentChatId=null;
+  lastQuestion="";
+  clearFile();
+
+  $("chatBox").innerHTML="";
+  welcome();
+  await loadChats();
+
+  if(innerWidth<769)toggleSide(false);
+}
+
+async function deleteChat(id){
+  if(!id||!confirm("Delete this conversation?"))return;
+
+  try{
+    const r=await fetch(`${API}/api/chat/delete`,{
+      method:"POST",
+      headers:headers(true),
+      body:JSON.stringify({chat_id:id})
+    });
+
+    if(r.status===401)return window.doLogout?.();
+    if(!r.ok)throw Error();
+
+    if(String(currentChatId)===String(id))await newChat();
+    else await loadChats();
+  }catch(e){alert("Could not delete conversation")}
+}
+
+function welcome(){
+  const w=document.createElement("div");
+  w.className="welcome";
+  w.id="welcomeScreen";
+
+  w.innerHTML=`
+    <div class="welcome-orb">
+      <img src="/static/brain3d.png" alt="Brain">
+    </div>
+    <h1>Brain 3.0</h1>
+    <p class="welcome-description">
+      Your AI assistant by B.CORP. Ask anything, write code,
+      research the web, or analyze your files.
+    </p>
+  `;
+
+  $("chatBox").appendChild(w);
+}
+
+function addMessage(role,text){
+  $("welcomeScreen")?.remove();
+
+  const wrap=document.createElement("div");
+  wrap.className=`message-wrap ${role}`;
+
+  const row=document.createElement("div");
+  row.className="message-row";
+
+  if(role==="ai"){
+    const avatar=document.createElement("div");
+    avatar.className="message-avatar ai-avatar";
+    avatar.innerHTML='<img src="/static/brain3d.png" alt="Brain">';
+
+    const msg=document.createElement("div");
+    msg.className="message ai-msg";
+
+    const content=document.createElement("div");
+    content.className="msg-content";
+    content.innerHTML=render(text);
+
+    msg.appendChild(content);
+    row.append(avatar,msg);
+
+    const copy=document.createElement("button");
+    copy.className="copy-btn";
+    copy.type="button";
+    copy.textContent="Copy";
+    copy.onclick=()=>copyMessage(content,copy);
+
+    const tools=document.createElement("div");
+    tools.className="copy-row";
+    tools.appendChild(copy);
+
+    wrap.append(row,tools);
+    $("chatBox").appendChild(wrap);
+    bottom();
+
+    return content;
+  }
+
+  const msg=document.createElement("div");
+  msg.className="message user-msg";
+  msg.textContent=text;
+
+  row.appendChild(msg);
+  wrap.appendChild(row);
+  $("chatBox").appendChild(wrap);
+  bottom();
+
+  return msg;
+}
+
+function render(text){
+  if(!text)return"";
+
+  let clean=String(text)
+    .replace(/Agent Research Results:/gi,"")
+    .trim();
+
+  if(!M||!P){
+    const d=document.createElement("div");
+    d.textContent=clean;
+    return d.innerHTML.replace(/\n/g,"<br>");
+  }
+
+  const html=marked.parse(clean);
+
+  return DOMPurify.sanitize(html,{
+    ALLOWED_TAGS:[
+      "p","br","strong","em","del",
+      "h1","h2","h3","h4",
+      "ul","ol","li","blockquote",
+      "pre","code","a",
+      "table","thead","tbody","tr","th","td"
+    ],
+    ALLOWED_ATTR:["href","target","rel"]
+  });
+}
+
+async function copyMessage(content,btn){
+  try{
+    await navigator.clipboard.writeText(content.innerText||"");
+    btn.textContent="Copied";
+    setTimeout(()=>btn.textContent="Copy",1500);
+  }catch{
+    btn.textContent="Failed";
+  }
+}
+
+function bottom(){
+  const box=$("chatBox");
+  requestAnimationFrame(()=>box.scrollTop=box.scrollHeight);
+}
+
+function state(on){
+  sending=on;
+
+  $("sendBtn").disabled=on;
+  $("stopBtn").style.display=on?"inline-flex":"none";
+  $("regenBtn").style.display=!on&&lastQuestion?"inline-flex":"none";
+}
+
+function stop(){
+  controller?.abort();
+  controller=null;
+  state(false);
+}
+
+async function send(question=null,regen=false){
+  if(sending)return;
+
+  const input=$("userInput");
+  const q=question!==null?String(question).trim():input.value.trim();
+  const attached=file;
+
+  if(!q&&!attached)return;
+  if(!auth())return window.showAuthScreen?.();
+
+  lastQuestion=q;
+  state(true);
+
+  if(!regen){
+    let display=q;
+    if(attached)display+=(display?"\n":"")+`📎 ${attached.name}`;
+    addMessage("user",display);
+  }
+
+  input.value="";
+  input.style.height="auto";
+
+  const cid=uuid();
+  const form=new FormData();
+
+  form.append("question",q);
+  form.append("client_msg_id",cid);
+  form.append("is_regen",regen?"1":"0");
+
+  if(currentChatId!=null)
+    form.append("chat_id",String(currentChatId));
+
+  if(attached)
+    form.append("file",attached,attached.name);
+
+  clearFile();
+
+  const ai=addMessage("ai","");
+  controller=new AbortController();
+
+  try{
+    const r=await fetch(`${API}/api/chat`,{
+      method:"POST",
+      headers:{
+        Authorization:`Bearer ${auth()}`,
+        Accept:"text/event-stream"
+      },
+      body:form,
+      signal:controller.signal,
+      cache:"no-store"
+    });
+
+    if(r.status===401){
+      window.doLogout?.();
+      throw Error("Session expired");
     }
-}
 
-function scrollChatToBottom() { const b = window.$("chatBox"); if (b) requestAnimationFrame(() => b.scrollTop = b.scrollHeight) }
-function stopGeneration() { if (controller) { controller.abort(); controller = null } setSendingState(false) }
-function setSendingState(s) { const send = window.$("sendBtn"), stop = window.$("stopBtn"), regen = window.$("regenBtn"); if (send) send.disabled = s; if (stop) stop.style.display = s? "inline-block" : "none"; if (regen) regen.style.display = s? "none" : "inline-block" }
+    if(r.status===403)throw Error("Access denied");
+    if(r.status===409)throw Error("Duplicate message");
+    if(!r.ok)throw Error(`Server ${r.status}`);
+    if(!r.body)throw Error("Streaming unavailable");
 
-async function sendMessage(q = null, regen = false) {
-    let ai = null;
-    try {
-        if (isSending) return;
-        await window.getAuthToken();
-        if (!window.authToken()) throw new Error("Please login");
-        const input = window.$("userInput"); if (!input) throw new Error("No input");
-        const question = q!== null? String(q).trim() : input.value.trim();
-        const file = selectedFile;
-        if (!question &&!file) return;
-        lastQuestion = question;
-        isSending = true; setSendingState(true);
-        if (!regen) { let dt = question; if (file) dt += `\n[Attached: ${file.name}]`; addMessage("user", dt) }
-        input.value = ""; input.style.height = "auto";
-        const cid = createUUID(); // FIX: New ID every time including regen
-        const fd = new FormData();
-        fd.append("question", question);
-        fd.append("client_msg_id", cid);
-        fd.append("is_regen", regen? "1" : "0");
-        if (currentChatId!= null) fd.append("chat_id", String(currentChatId));
-        if (file) fd.append("file", file, file.name);
-        resetAttachment();
-        ai = addMessage("ai", "");
-        controller = new AbortController();
+    const reader=r.body.getReader();
+    const decoder=new TextDecoder();
 
-        debug("Sending request:", {cid, hasFile:!!file, regen});
-        const r = await fetch(`${API_BASE}/api/chat`, { method: "POST", headers: { "Authorization": `Bearer ${window.authToken()}`, "Accept": "text/event-stream" }, body: fd, signal: controller.signal, cache: "no-store" });
+    let buffer="",full="";
 
-        debug("Response:", r.status, r.headers.get("X-Request-ID"));
-        if (r.status === 401) { window.doLogout(); throw new Error("Session expired. Please login again."); }
-        if (r.status === 403) throw new Error("Forbidden");
-        if (r.status === 409) throw new Error("Duplicate message");
-        if (!r.ok) throw new Error(`Server ${r.status}`);
-        if (!r.body) throw new Error("No stream");
+    const event=raw=>{
+      if(!raw.trim())return;
 
-        const reader = r.body.getReader(), decoder = new TextDecoder(); let buf = "", full = "";
+      let type="message",data="";
 
-        function processEV(ev) {
-            if (!ev.trim()) return; let evn = "message", data = [];
-            ev.split(/\r?\n/).forEach(l => { if (!l || l[0] === ":") return; if (l.startsWith("event:")) evn = l.slice(6).trim(); else if (l.startsWith("data:")) data.push(l.slice(5).replace(/^ /, "")) });
-            if (!data.length) return; let payload; try { payload = JSON.parse(data.join("\n")) } catch { return }
+      raw.split("\n").forEach(line=>{
+        if(line.startsWith("event:"))
+          type=line.slice(6).trim();
 
-            switch (evn) {
-                case "token":
-                    const t = payload?.text?? "";
-                    if (t) {
-                        full += t;
-                        ai && (ai.innerHTML = renderAI(full));
-                        scrollChatToBottom()
-                    }
-                    break;
-                case "rag_status": // NEW FOR V8.4
-                    const s = payload?.saved || 0;
-                    const total = payload?.total || 0;
-                    const err = payload?.error;
-                    if(total > 0) {
-                        const msg = err? `⚠ Indexed ${s}/${total} chunks. Error: ${err}` : `✓ Indexed ${s}/${total} chunks`;
-                        addMessage("ai", `*${msg}*`);
-                    }
-                    break;
-                case "chat_id":
-                    if (payload?.chat_id) { currentChatId = payload.chat_id }
-                    break;
-                case "done":
-                    if (payload?.chat_id) currentChatId = payload.chat_id;
-                    loadSidebar();
-                    break;
-                case "error":
-                    throw new Error(payload?.message || "Error")
-            }
-        }
+        if(line.startsWith("data:"))
+          data+=line.slice(5).trim();
+      });
 
-        while (true) {
-            const { value, done } = await reader.read();
-            if (done) { buf += decoder.decode(); if (buf.trim()) processEV(buf); break }
-            buf += decoder.decode(value, { stream: true }); buf = buf.replace(/\r\n/g, "\n"); const parts = buf.split("\n\n"); buf = parts.pop() || ""; parts.forEach(processEV);
-        }
-    } catch (e) {
-        if (e.name === "AbortError") { ai && (ai.innerHTML = "<i>*Stopped*</i>"); return }
-        console.error(e); ai && (ai.innerHTML = renderAI(`**Error**\n\n${e.message}`))
-    } finally { setSendingState(false); isSending = false; controller = null }
+      if(!data)return;
+
+      let p;
+      try{p=JSON.parse(data)}catch{return}
+
+      if(type==="token"){
+        full+=p.text||"";
+        ai.innerHTML=render(full);
+        bottom();
+      }
+
+      if(type==="chat_id"&&p.chat_id)
+        currentChatId=p.chat_id;
+
+      if(type==="done"){
+        if(p.chat_id)currentChatId=p.chat_id;
+        loadChats();
+      }
+
+      if(type==="error")
+        throw Error(p.message||"AI error");
+    };
+
+    while(true){
+      const {value,done}=await reader.read();
+
+      if(done){
+        buffer+=decoder.decode();
+        if(buffer)event(buffer);
+        break;
+      }
+
+      buffer+=decoder.decode(value,{stream:true});
+      buffer=buffer.replace(/\r\n/g,"\n");
+
+      const parts=buffer.split("\n\n");
+      buffer=parts.pop()||"";
+      parts.forEach(event);
+    }
+
+  }catch(e){
+    if(e.name==="AbortError"){
+      ai.innerHTML="<em>Generation stopped.</em>";
+    }else{
+      console.error(e);
+      ai.innerHTML=render(`**Error**\n\n${e.message}`);
+    }
+  }finally{
+    controller=null;
+    state(false);
+  }
       }
