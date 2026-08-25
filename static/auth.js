@@ -1,90 +1,144 @@
 "use strict";
 
-let userId = "00000000-0000-0000-0000-000000000001";
+const SUPABASE_URL="YOUR_SUPABASE_URL";
+const SUPABASE_KEY="YOUR_SUPABASE_ANON_KEY";
 
-window.$ = id => document.getElementById(id);
+window.$=id=>document.getElementById(id);
 
-function debug(...args) {
-    console.log("%c[Brain 3.0]", "color:#00BFFF;font-weight:bold", ...args);
+let sb=null,user=null;
+
+function status(t){
+  const x=$("authStatus");
+  if(x)x.textContent=t||"";
 }
 
-function setAuthStatus(text) {
-    const el = $("authStatus");
-    if (el) el.textContent = text || "";
+function error(t,ok=false){
+  const x=$("authError");
+  if(!x)return;
+  x.textContent=t||"";
+  x.style.color=ok?"#22c55e":"#ef4444";
 }
 
-function showAuthError(message, success = false) {
-    const el = $("authError");
-    if (!el) return;
-    el.textContent = message || "";
-    el.style.color = success ? "#22c55e" : "#ef4444";
+function showAuthScreen(){
+  $("authScreen").style.display="flex";
+  $("chatContainer").style.display="none";
 }
 
-function showAuthScreen() {
-    const auth = $("authScreen");
-    const chat = $("chatContainer");
-
-    if (auth) auth.style.display = "none";
-    if (chat) chat.style.display = "block";
-
-    setAuthStatus("Brain 3.0 online");
+function showChatScreen(){
+  $("authScreen").style.display="none";
+  $("chatContainer").style.display="block";
+  $("userEmailDisplay")&&( $("userEmailDisplay").textContent=user?.email||"");
+  $("userAvatar")&&( $("userAvatar").textContent=(user?.email||"U")[0].toUpperCase() );
+  window.loadChats?.();
 }
 
-function showChatScreen() {
-    const auth = $("authScreen");
-    const chat = $("chatContainer");
+async function initAuth(){
+  if(!window.supabase)throw Error("Supabase library missing");
 
-    if (auth) auth.style.display = "none";
-    if (chat) chat.style.display = "block";
+  sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+  window.supabaseClient=sb;
 
-    debug("Chat screen displayed");
+  const {data}=await sb.auth.getSession();
+  user=data?.session?.user||null;
 
-    if (typeof window.loadSidebar === "function") {
-        window.loadSidebar();
+  if(user)showChatScreen();
+  else showAuthScreen();
+
+  sb.auth.onAuthStateChange((_e,s)=>{
+    user=s?.user||null;
+    if(user)showChatScreen();
+    else showAuthScreen();
+  });
+
+  status(user?"Brain 3.0 online":"Sign in to continue");
+}
+
+async function getAuthToken(){
+  if(!sb)return null;
+  const {data}=await sb.auth.getSession();
+  return data?.session?.access_token||null;
+}
+
+function authToken(){
+  return window._brainToken||null;
+}
+
+async function refreshToken(){
+  const token=await getAuthToken();
+  window._brainToken=token;
+  return token;
+}
+
+function getAuthHeaders(){
+  const token=window._brainToken;
+  return token
+    ? {Authorization:`Bearer ${token}`,Accept:"application/json"}
+    : {Accept:"application/json"};
+}
+
+async function doLogin(){
+  error("");
+  const email=$("emailInput")?.value.trim();
+  const password=$("passwordInput")?.value;
+
+  if(!email||!password)return error("Enter your email and password.");
+
+  try{
+    status("Signing in...");
+    const {data,error:e}=await sb.auth.signInWithPassword({email,password});
+    if(e)throw e;
+
+    user=data.user;
+    await refreshToken();
+    status("Brain 3.0 online");
+    showChatScreen();
+  }catch(e){
+    console.error(e);
+    error(e.message||"Sign in failed.");
+  }
+}
+
+async function doSignup(){
+  error("");
+  const email=$("emailInput")?.value.trim();
+  const password=$("passwordInput")?.value;
+
+  if(!email||!password)return error("Enter an email and password.");
+  if(password.length<6)return error("Password must be at least 6 characters.");
+
+  try{
+    status("Creating account...");
+    const {data,error:e}=await sb.auth.signUp({email,password});
+    if(e)throw e;
+
+    if(data.session){
+      user=data.user;
+      await refreshToken();
+      showChatScreen();
+    }else{
+      error("Account created. Check your email to verify your account.",true);
     }
+  }catch(e){
+    console.error(e);
+    error(e.message||"Account creation failed.");
+  }
 }
 
-async function initAuth() {
-    debug("Authentication disabled - test mode");
-
-    setAuthStatus("Brain 3.0 online");
-    showChatScreen();
+async function doLogout(){
+  try{await sb?.auth.signOut()}catch(e){console.error(e)}
+  window._brainToken=null;
+  user=null;
+  showAuthScreen();
 }
 
-async function getAuthToken() {
-    return null;
-}
-
-function getAuthHeaders() {
-    return {
-        "Accept": "application/json"
-    };
-}
-
-async function doLogin() {
-    showChatScreen();
-}
-
-async function doSignup() {
-    showChatScreen();
-}
-
-async function doLogout() {
-    showChatScreen();
-}
-
-window.getAuthHeaders = getAuthHeaders;
-window.getAuthToken = getAuthToken;
-window.doLogin = doLogin;
-window.doSignup = doSignup;
-window.doLogout = doLogout;
-window.showAuthScreen = showAuthScreen;
-window.showChatScreen = showChatScreen;
-window.userId = () => userId;
-window.authToken = () => null;
-window.initAuth = initAuth;
-
-document.addEventListener("DOMContentLoaded", () => {
-    debug("Authentication bypass enabled");
-    initAuth();
-});
+window.initAuth=initAuth;
+window.getAuthToken=getAuthToken;
+window.refreshToken=refreshToken;
+window.authToken=authToken;
+window.getAuthHeaders=getAuthHeaders;
+window.doLogin=doLogin;
+window.doSignup=doSignup;
+window.doLogout=doLogout;
+window.showAuthScreen=showAuthScreen;
+window.showChatScreen=showChatScreen;
+window.currentUser=()=>user;
