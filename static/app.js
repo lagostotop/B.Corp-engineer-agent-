@@ -1,34 +1,22 @@
 "use strict";
 
-const $=id=>document.getElementById(id);
-const API="";
-const M=!!window.marked,P=!!window.DOMPurify;
-
+const $=id=>document.getElementById(id),API="";
 let sending=false,file=null,controller=null,currentChatId=null,lastQuestion="";
 
 document.addEventListener("DOMContentLoaded",async()=>{
   events();
-  try{await window.initAuth?.()}catch(e){console.error(e)}
+  try{
+    await window.initAuth?.();
+    await window.refreshToken?.();
+  }catch(e){console.error("Init:",e)}
 });
 
-function auth(){return window.authToken?.()||""}
-function headers(json=false){
-  return {...(json?{"Content-Type":"application/json"}:{}),...window.getAuthHeaders?.()};
-}
+const token=()=>window.authToken?.()||"";
 
-function showAuthScreen(){
-  $("authScreen").style.display="flex";
-  $("chatContainer").style.display="none";
-}
-
-function showChatScreen(){
-  $("authScreen").style.display="none";
-  $("chatContainer").style.display="flex";
-  loadChats();
-}
-
-window.showAuthScreen=showAuthScreen;
-window.showChatScreen=showChatScreen;
+const headers=json=>({
+  ...(json?{"Content-Type":"application/json"}:{}),
+  ...window.getAuthHeaders?.()
+});
 
 function events(){
   $("uploadBtn")?.addEventListener("click",()=>$("fileInput")?.click());
@@ -37,46 +25,35 @@ function events(){
     $("filePreview").style.display=file?"flex":"none";
     $("fileName").textContent=file?.name||"";
   });
-
   $("removeFileBtn")?.addEventListener("click",clearFile);
   $("newChatBtn")?.addEventListener("click",newChat);
   $("logoutBtn")?.addEventListener("click",window.doLogout);
   $("loginBtn")?.addEventListener("click",window.doLogin);
   $("signupBtn")?.addEventListener("click",window.doSignup);
-
-  $("hamburgerBtn")?.addEventListener("click",()=>toggleSide(true));
-  $("closeSidebarBtn")?.addEventListener("click",()=>toggleSide(false));
-  $("sidebarOverlay")?.addEventListener("click",()=>toggleSide(false));
-
+  $("hamburgerBtn")?.addEventListener("click",()=>side(1));
+  $("closeSidebarBtn")?.addEventListener("click",()=>side(0));
+  $("sidebarOverlay")?.addEventListener("click",()=>side(0));
   $("stopBtn")?.addEventListener("click",stop);
-  $("regenBtn")?.addEventListener("click",()=>lastQuestion&&!sending&&send(lastQuestion,true));
+  $("regenBtn")?.addEventListener("click",()=>lastQuestion&&!sending&&send(lastQuestion,1));
 
   $("chatForm")?.addEventListener("submit",e=>{
-    e.preventDefault();
-    send();
+    e.preventDefault();send();
   });
 
-  $("userInput")?.addEventListener("input",autoGrow);
+  $("userInput")?.addEventListener("input",grow);
   $("userInput")?.addEventListener("keydown",e=>{
     if(e.key==="Enter"&&!e.shiftKey&&!e.isComposing){
-      e.preventDefault();
-      send();
+      e.preventDefault();send();
     }
   });
-
-  // REMOVED: welcome-chip click handler because we removed welcome UI
-
-  window.addEventListener("resize",()=>{
-    if(innerWidth>=769) toggleSide(false);
-  });
 }
 
-function toggleSide(show){
-  $("sidebar")?.classList.toggle("show",show);
-  $("sidebarOverlay")?.classList.toggle("show",show&&innerWidth<769);
+function side(v){
+  $("sidebar")?.classList.toggle("show",!!v);
+  $("sidebarOverlay")?.classList.toggle("show",!!v&&innerWidth<1100);
 }
 
-function autoGrow(){
+function grow(){
   const x=$("userInput");
   x.style.height="auto";
   x.style.height=Math.min(x.scrollHeight,180)+"px";
@@ -89,37 +66,41 @@ function clearFile(){
   $("fileName").textContent="";
 }
 
-function uuid(){
-  if(crypto.randomUUID)return crypto.randomUUID();
-  return"xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g,c=>{
-    const r=Math.random()*16|0,v=c==="x"?r:r&3|8;
-    return v.toString(16);
-  });
+function id(){
+  return crypto.randomUUID?.()||
+    "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g,c=>{
+      const r=Math.random()*16|0,v=c==="x"?r:r&3|8;
+      return v.toString(16);
+    });
 }
 
 async function loadChats(){
-  if(!auth())return;
+  if(!token())return;
+
   try{
     const r=await fetch(`${API}/api/chats`,{
       headers:headers(),cache:"no-store"
     });
-    if(r.status===401)return window.doLogout?.();
-    if(!r.ok)return;
 
-    const chats=await r.json();
-    const list=$("chatList");
-    list.innerHTML="";
-
-    if(!chats.length){
-      list.innerHTML='<div style="padding:12px;color:#64748b;font-size:12px">No conversations yet</div>';
-      return;
+    if(r.status===401){
+      await window.refreshToken?.();
+      if(!token())return window.doLogout?.();
     }
 
-    chats.forEach(c=>{
+    if(!r.ok)return;
+
+    const chats=await r.json(),list=$("chatList");
+    if(!list)return;
+
+    list.innerHTML=chats?.length?"":
+      '<div style="padding:12px;color:#64748b;font-size:12px">No conversations yet</div>';
+
+    chats?.forEach(c=>{
       if(!c?.id)return;
 
       const item=document.createElement("div");
-      item.className="chat-item"+(String(c.id)===String(currentChatId)?" active":"");
+      item.className="chat-item"+
+        (String(c.id)===String(currentChatId)?" active":"");
 
       const title=document.createElement("span");
       title.className="chat-item-title";
@@ -137,13 +118,13 @@ async function loadChats(){
         deleteChat(c.id);
       };
 
-      list.appendChild(item);
+      list.append(item);
     });
   }catch(e){console.error("Chats:",e)}
 }
 
 async function loadChat(id){
-  if(!id||sending)return;
+  if(!id||sending||!token())return;
 
   try{
     const r=await fetch(`${API}/api/chat/${encodeURIComponent(id)}`,{
@@ -155,20 +136,16 @@ async function loadChat(id){
 
     const msgs=await r.json();
     currentChatId=id;
+    $("chatBox").innerHTML="";
 
-    const box=$("chatBox");
-    box.innerHTML=""; // CLEAN START - NO WELCOME
-
-    msgs.forEach(m=>{
-      if(m?.role==="user")addMessage("user",m.content);
-      if(m?.role==="assistant")addMessage("ai",m.content);
+    msgs?.forEach(m=>{
+      if(m?.role==="user")add("user",m.content);
+      if(m?.role==="assistant")add("ai",m.content);
     });
 
-    // REMOVED: if(!msgs.length)welcome(); 
     await loadChats();
-
-    if(innerWidth<769)toggleSide(false);
-  }catch(e){console.error("Load chat:",e)}
+    if(innerWidth<1100)side(0);
+  }catch(e){console.error("Chat:",e)}
 }
 
 async function newChat(){
@@ -176,11 +153,9 @@ async function newChat(){
   currentChatId=null;
   lastQuestion="";
   clearFile();
-
-  $("chatBox").innerHTML=""; // CLEAN START - NO WELCOME
+  $("chatBox").innerHTML="";
   await loadChats();
-
-  if(innerWidth<769)toggleSide(false);
+  if(innerWidth<1100)side(0);
 }
 
 async function deleteChat(id){
@@ -189,24 +164,40 @@ async function deleteChat(id){
   try{
     const r=await fetch(`${API}/api/chat/delete`,{
       method:"POST",
-      headers:headers(true),
+      headers:headers(1),
       body:JSON.stringify({chat_id:id})
     });
 
     if(r.status===401)return window.doLogout?.();
     if(!r.ok)throw Error();
 
-    if(String(currentChatId)===String(id))await newChat();
-    else await loadChats();
-  }catch(e){alert("Could not delete conversation")}
+    String(currentChatId)===String(id)?await newChat():await loadChats();
+  }catch{alert("Could not delete conversation")}
 }
 
-// REMOVED: welcome() function completely. No more big brain
+function render(text){
+  if(!text)return"";
 
-function addMessage(role,text){
-  // REMOVED: $("welcomeScreen")?.remove();
+  let x=String(text).replace(/Agent Research Results:/gi,"").trim();
 
-  const wrap=document.createElement("div");
+  if(!window.marked||!window.DOMPurify){
+    const d=document.createElement("div");
+    d.textContent=x;
+    return d.innerHTML.replace(/\n/g,"<br>");
+  }
+
+  return DOMPurify.sanitize(marked.parse(x),{
+    ALLOWED_TAGS:[
+      "p","br","strong","em","del","h1","h2","h3","h4",
+      "ul","ol","li","blockquote","pre","code","a",
+      "table","thead","tbody","tr","th","td"
+    ],
+    ALLOWED_ATTR:["href","target","rel"]
+  });
+}
+
+function add(role,text){
+  const box=$("chatBox"),wrap=document.createElement("div");
   wrap.className=`message-wrap ${role}`;
 
   const row=document.createElement("div");
@@ -224,23 +215,27 @@ function addMessage(role,text){
     content.className="msg-content";
     content.innerHTML=render(text);
 
-    msg.appendChild(content);
+    msg.append(content);
     row.append(avatar,msg);
-
-    const copy=document.createElement("button");
-    copy.className="copy-btn";
-    copy.type="button";
-    copy.textContent="Copy";
-    copy.onclick=()=>copyMessage(content,copy);
 
     const tools=document.createElement("div");
     tools.className="copy-row";
-    tools.appendChild(copy);
 
+    const copy=document.createElement("button");
+    copy.className="copy-btn";
+    copy.textContent="Copy";
+    copy.onclick=async()=>{
+      try{
+        await navigator.clipboard.writeText(content.innerText||"");
+        copy.textContent="Copied";
+        setTimeout(()=>copy.textContent="Copy",1500);
+      }catch{copy.textContent="Failed"}
+    };
+
+    tools.append(copy);
     wrap.append(row,tools);
-    $("chatBox").appendChild(wrap);
+    box.append(wrap);
     bottom();
-
     return content;
   }
 
@@ -248,62 +243,23 @@ function addMessage(role,text){
   msg.className="message user-msg";
   msg.textContent=text;
 
-  row.appendChild(msg);
-  wrap.appendChild(row);
-  $("chatBox").appendChild(wrap);
+  row.append(msg);
+  wrap.append(row);
+  box.append(wrap);
   bottom();
-
   return msg;
 }
 
-function render(text){
-  if(!text)return"";
-
-  let clean=String(text)
-   .replace(/Agent Research Results:/gi,"")
-   .trim();
-
-  if(!M||!P){
-    const d=document.createElement("div");
-    d.textContent=clean;
-    return d.innerHTML.replace(/\n/g,"<br>");
-  }
-
-  const html=marked.parse(clean);
-
-  return DOMPurify.sanitize(html,{
-    ALLOWED_TAGS:[
-      "p","br","strong","em","del",
-      "h1","h2","h3","h4",
-      "ul","ol","li","blockquote",
-      "pre","code","a",
-      "table","thead","tbody","tr","th","td"
-    ],
-    ALLOWED_ATTR:["href","target","rel"]
-  });
-}
-
-async function copyMessage(content,btn){
-  try{
-    await navigator.clipboard.writeText(content.innerText||"");
-    btn.textContent="Copied";
-    setTimeout(()=>btn.textContent="Copy",1500);
-  }catch{
-    btn.textContent="Failed";
-  }
-}
-
 function bottom(){
-  const box=$("chatBox");
-  requestAnimationFrame(()=>box.scrollTop=box.scrollHeight);
+  const x=$("chatBox");
+  requestAnimationFrame(()=>x.scrollTop=x.scrollHeight);
 }
 
-function state(on){
-  sending=on;
-
-  $("sendBtn").disabled=on;
-  $("stopBtn").style.display=on?"inline-flex":"none";
-  $("regenBtn").style.display=!on&&lastQuestion?"inline-flex":"none";
+function state(v){
+  sending=v;
+  $("sendBtn").disabled=v;
+  $("stopBtn").style.display=v?"inline-flex":"none";
+  $("regenBtn").style.display=!v&&lastQuestion?"inline-flex":"none";
 }
 
 function stop(){
@@ -320,7 +276,14 @@ async function send(question=null,regen=false){
   const attached=file;
 
   if(!q&&!attached)return;
-  if(!auth())return window.showAuthScreen?.();
+
+  /* Refresh the real Supabase session before every request */
+  await window.refreshToken?.();
+
+  if(!token()){
+    window.showAuthScreen?.();
+    return;
+  }
 
   lastQuestion=q;
   state(true);
@@ -328,35 +291,32 @@ async function send(question=null,regen=false){
   if(!regen){
     let display=q;
     if(attached)display+=(display?"\n":"")+`📎 ${attached.name}`;
-    addMessage("user",display);
+    add("user",display);
   }
 
   input.value="";
   input.style.height="auto";
 
-  const cid=uuid();
   const form=new FormData();
-
   form.append("question",q);
-  form.append("client_msg_id",cid);
+  form.append("client_msg_id",id());
   form.append("is_regen",regen?"1":"0");
 
   if(currentChatId!=null)
     form.append("chat_id",String(currentChatId));
 
-  if(attached)
-    form.append("file",attached,attached.name);
+  if(attached)form.append("file",attached,attached.name);
 
   clearFile();
 
-  const ai=addMessage("ai","");
+  const ai=add("ai","");
   controller=new AbortController();
 
   try{
     const r=await fetch(`${API}/api/chat`,{
       method:"POST",
       headers:{
-        Authorization:`Bearer ${auth()}`,
+        Authorization:`Bearer ${token()}`,
         Accept:"text/event-stream"
       },
       body:form,
@@ -365,8 +325,8 @@ async function send(question=null,regen=false){
     });
 
     if(r.status===401){
-      window.doLogout?.();
-      throw Error("Session expired");
+      await window.refreshToken?.();
+      throw Error(token()?"Authentication rejected":"Session expired");
     }
 
     if(r.status===403)throw Error("Access denied");
@@ -374,22 +334,16 @@ async function send(question=null,regen=false){
     if(!r.ok)throw Error(`Server ${r.status}`);
     if(!r.body)throw Error("Streaming unavailable");
 
-    const reader=r.body.getReader();
-    const decoder=new TextDecoder();
-
+    const reader=r.body.getReader(),decoder=new TextDecoder();
     let buffer="",full="";
 
     const event=raw=>{
       if(!raw.trim())return;
 
       let type="message",data="";
-
       raw.split("\n").forEach(line=>{
-        if(line.startsWith("event:"))
-          type=line.slice(6).trim();
-
-        if(line.startsWith("data:"))
-          data+=line.slice(5).trim();
+        if(line.startsWith("event:"))type=line.slice(6).trim();
+        if(line.startsWith("data:"))data+=line.slice(5).trim();
       });
 
       if(!data)return;
@@ -401,18 +355,14 @@ async function send(question=null,regen=false){
         full+=p.text||"";
         ai.innerHTML=render(full);
         bottom();
-      }
-
-      if(type==="chat_id"&&p.chat_id)
-        currentChatId=p.chat_id;
-
-      if(type==="done"){
+      }else if(type==="chat_id"){
+        if(p.chat_id)currentChatId=p.chat_id;
+      }else if(type==="done"){
         if(p.chat_id)currentChatId=p.chat_id;
         loadChats();
-      }
-
-      if(type==="error")
+      }else if(type==="error"){
         throw Error(p.message||"AI error");
+      }
     };
 
     while(true){
@@ -431,11 +381,10 @@ async function send(question=null,regen=false){
       buffer=parts.pop()||"";
       parts.forEach(event);
     }
-
   }catch(e){
-    if(e.name==="AbortError"){
+    if(e.name==="AbortError")
       ai.innerHTML="<em>Generation stopped.</em>";
-    }else{
+    else{
       console.error(e);
       ai.innerHTML=render(`**Error**\n\n${e.message}`);
     }
@@ -444,3 +393,6 @@ async function send(question=null,regen=false){
     state(false);
   }
 }
+
+window.loadChats=loadChats;
+window.loadSidebar=loadChats;
