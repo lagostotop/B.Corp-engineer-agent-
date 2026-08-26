@@ -9,7 +9,7 @@ from brain_core import ModelRouter, save_message, get_chat_history, save_to_rag,
 
 VERSION = "8.5.4"
 UPLOAD_FOLDER = "/tmp/uploads"
-TEST_USER_ID = os.getenv("TEST_USER_ID", "00000000-0000-0000-0000-000001")
+TEST_USER_ID = os.getenv("TEST_USER_ID", "000000000-0000-0000-0000-000000000001")
 SUPABASE_URL = os.getenv("SUPABASE_URL", "").strip()
 SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "").strip()
 REQUIRED_ENV = ("SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "GROQ_API_KEY")
