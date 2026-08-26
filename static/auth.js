@@ -2,17 +2,18 @@
 
 window.$=id=>document.getElementById(id);
 
-const USER_ID="00000000-0000-0000-0000-000000000001";
+const TEST_USER_ID="00000000-0000-0000-0000-000000000001";
 
 function showAuthScreen(){
-  $("authScreen")&&( $("authScreen").style.display="none");
-  $("chatContainer")&&( $("chatContainer").style.display="block");
-  window.loadChats?.();
+  const a=$("authScreen"),c=$("chatContainer");
+  if(a)a.style.display="none";
+  if(c)c.style.display="flex";
 }
 
 function showChatScreen(){
-  $("authScreen")&&( $("authScreen").style.display="none");
-  $("chatContainer")&&( $("chatContainer").style.display="block");
+  const a=$("authScreen"),c=$("chatContainer");
+  if(a)a.style.display="none";
+  if(c)c.style.display="flex";
   window.loadChats?.();
 }
 
@@ -21,20 +22,28 @@ async function initAuth(){
 }
 
 async function getAuthToken(){
-  return "";
+  return null;
 }
 
 function authToken(){
-  return "dev-mode";
+  return "test-mode";
 }
 
 function getAuthHeaders(){
   return {"Accept":"application/json"};
 }
 
-async function doLogin(){showChatScreen()}
-async function doSignup(){showChatScreen()}
-async function doLogout(){showChatScreen()}
+async function doLogin(){
+  showChatScreen();
+}
+
+async function doSignup(){
+  showChatScreen();
+}
+
+async function doLogout(){
+  showChatScreen();
+}
 
 window.initAuth=initAuth;
 window.getAuthToken=getAuthToken;
@@ -45,4 +54,4 @@ window.doSignup=doSignup;
 window.doLogout=doLogout;
 window.showAuthScreen=showAuthScreen;
 window.showChatScreen=showChatScreen;
-window.userId=()=>USER_ID;
+window.userId=()=>TEST_USER_ID;
