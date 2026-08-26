@@ -5,56 +5,57 @@ let sending=false,file=null,controller=null,currentChatId=null,lastQuestion="";
 
 document.addEventListener("DOMContentLoaded",async()=>{
   events();
-  try{
-    await window.initAuth?.();
-    await window.refreshToken?.();
-  }catch(e){console.error("Init:",e)}
-});
-
-const token=()=>window.authToken?.()||"";
-
-const headers=json=>({
-  ...(json?{"Content-Type":"application/json"}:{}),
-  ...window.getAuthHeaders?.()
+  await window.initAuth?.();
 });
 
 function events(){
   $("uploadBtn")?.addEventListener("click",()=>$("fileInput")?.click());
+
   $("fileInput")?.addEventListener("change",e=>{
     file=e.target.files?.[0]||null;
     $("filePreview").style.display=file?"flex":"none";
     $("fileName").textContent=file?.name||"";
   });
+
   $("removeFileBtn")?.addEventListener("click",clearFile);
   $("newChatBtn")?.addEventListener("click",newChat);
-  $("logoutBtn")?.addEventListener("click",window.doLogout);
-  $("loginBtn")?.addEventListener("click",window.doLogin);
-  $("signupBtn")?.addEventListener("click",window.doSignup);
-  $("hamburgerBtn")?.addEventListener("click",()=>side(1));
-  $("closeSidebarBtn")?.addEventListener("click",()=>side(0));
-  $("sidebarOverlay")?.addEventListener("click",()=>side(0));
+
+  $("hamburgerBtn")?.addEventListener("click",()=>side(true));
+  $("closeSidebarBtn")?.addEventListener("click",()=>side(false));
+  $("sidebarOverlay")?.addEventListener("click",()=>side(false));
+
   $("stopBtn")?.addEventListener("click",stop);
-  $("regenBtn")?.addEventListener("click",()=>lastQuestion&&!sending&&send(lastQuestion,1));
+  $("regenBtn")?.addEventListener("click",()=>{
+    if(lastQuestion&&!sending)send(lastQuestion,true);
+  });
 
   $("chatForm")?.addEventListener("submit",e=>{
-    e.preventDefault();send();
+    e.preventDefault();
+    send();
   });
 
   $("userInput")?.addEventListener("input",grow);
+
   $("userInput")?.addEventListener("keydown",e=>{
     if(e.key==="Enter"&&!e.shiftKey&&!e.isComposing){
-      e.preventDefault();send();
+      e.preventDefault();
+      send();
     }
+  });
+
+  window.addEventListener("resize",()=>{
+    if(innerWidth>1100)side(false);
   });
 }
 
-function side(v){
-  $("sidebar")?.classList.toggle("show",!!v);
-  $("sidebarOverlay")?.classList.toggle("show",!!v&&innerWidth<1100);
+function side(show){
+  $("sidebar")?.classList.toggle("show",show);
+  $("sidebarOverlay")?.classList.toggle("show",show&&innerWidth<=1100);
 }
 
 function grow(){
   const x=$("userInput");
+  if(!x)return;
   x.style.height="auto";
   x.style.height=Math.min(x.scrollHeight,180)+"px";
 }
@@ -62,38 +63,28 @@ function grow(){
 function clearFile(){
   file=null;
   if($("fileInput"))$("fileInput").value="";
-  $("filePreview").style.display="none";
-  $("fileName").textContent="";
+  if($("filePreview"))$("filePreview").style.display="none";
+  if($("fileName"))$("fileName").textContent="";
 }
 
-function id(){
+function uuid(){
   return crypto.randomUUID?.()||
-    "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g,c=>{
-      const r=Math.random()*16|0,v=c==="x"?r:r&3|8;
-      return v.toString(16);
-    });
+  "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g,c=>{
+    const r=Math.random()*16|0;
+    return (c==="x"?r:r&3|8).toString(16);
+  });
 }
 
 async function loadChats(){
-  if(!token())return;
-
   try{
-    const r=await fetch(`${API}/api/chats`,{
-      headers:headers(),cache:"no-store"
-    });
-
-    if(r.status===401){
-      await window.refreshToken?.();
-      if(!token())return window.doLogout?.();
-    }
-
+    const r=await fetch(`${API}/api/chats`,{cache:"no-store"});
     if(!r.ok)return;
 
     const chats=await r.json(),list=$("chatList");
     if(!list)return;
 
     list.innerHTML=chats?.length?"":
-      '<div style="padding:12px;color:#64748b;font-size:12px">No conversations yet</div>';
+      '<div class="empty-chats">No conversations yet</div>';
 
     chats?.forEach(c=>{
       if(!c?.id)return;
@@ -112,7 +103,9 @@ async function loadChats(){
       del.textContent="×";
 
       item.append(title,del);
+
       item.onclick=()=>loadChat(c.id);
+
       del.onclick=e=>{
         e.stopPropagation();
         deleteChat(c.id);
@@ -120,22 +113,25 @@ async function loadChats(){
 
       list.append(item);
     });
-  }catch(e){console.error("Chats:",e)}
+  }catch(e){
+    console.error("Chats:",e);
+  }
 }
 
 async function loadChat(id){
-  if(!id||sending||!token())return;
+  if(!id||sending)return;
 
   try{
-    const r=await fetch(`${API}/api/chat/${encodeURIComponent(id)}`,{
-      headers:headers(),cache:"no-store"
-    });
+    const r=await fetch(
+      `${API}/api/chat/${encodeURIComponent(id)}`,
+      {cache:"no-store"}
+    );
 
-    if(r.status===401)return window.doLogout?.();
     if(!r.ok)throw Error(`Server ${r.status}`);
 
     const msgs=await r.json();
     currentChatId=id;
+
     $("chatBox").innerHTML="";
 
     msgs?.forEach(m=>{
@@ -144,8 +140,11 @@ async function loadChat(id){
     });
 
     await loadChats();
-    if(innerWidth<1100)side(0);
-  }catch(e){console.error("Chat:",e)}
+
+    if(innerWidth<=1100)side(false);
+  }catch(e){
+    console.error("Chat:",e);
+  }
 }
 
 async function newChat(){
@@ -153,9 +152,11 @@ async function newChat(){
   currentChatId=null;
   lastQuestion="";
   clearFile();
+
   $("chatBox").innerHTML="";
   await loadChats();
-  if(innerWidth<1100)side(0);
+
+  if(innerWidth<=1100)side(false);
 }
 
 async function deleteChat(id){
@@ -164,21 +165,28 @@ async function deleteChat(id){
   try{
     const r=await fetch(`${API}/api/chat/delete`,{
       method:"POST",
-      headers:headers(1),
+      headers:{"Content-Type":"application/json"},
       body:JSON.stringify({chat_id:id})
     });
 
-    if(r.status===401)return window.doLogout?.();
     if(!r.ok)throw Error();
 
-    String(currentChatId)===String(id)?await newChat():await loadChats();
-  }catch{alert("Could not delete conversation")}
+    if(String(currentChatId)===String(id))
+      await newChat();
+    else
+      await loadChats();
+
+  }catch{
+    alert("Could not delete conversation");
+  }
 }
 
 function render(text){
   if(!text)return"";
 
-  let x=String(text).replace(/Agent Research Results:/gi,"").trim();
+  const x=String(text)
+    .replace(/Agent Research Results:/gi,"")
+    .trim();
 
   if(!window.marked||!window.DOMPurify){
     const d=document.createElement("div");
@@ -188,8 +196,10 @@ function render(text){
 
   return DOMPurify.sanitize(marked.parse(x),{
     ALLOWED_TAGS:[
-      "p","br","strong","em","del","h1","h2","h3","h4",
-      "ul","ol","li","blockquote","pre","code","a",
+      "p","br","strong","em","del",
+      "h1","h2","h3","h4",
+      "ul","ol","li","blockquote",
+      "pre","code","a",
       "table","thead","tbody","tr","th","td"
     ],
     ALLOWED_ATTR:["href","target","rel"]
@@ -197,7 +207,8 @@ function render(text){
 }
 
 function add(role,text){
-  const box=$("chatBox"),wrap=document.createElement("div");
+  const box=$("chatBox");
+  const wrap=document.createElement("div");
   wrap.className=`message-wrap ${role}`;
 
   const row=document.createElement("div");
@@ -223,19 +234,24 @@ function add(role,text){
 
     const copy=document.createElement("button");
     copy.className="copy-btn";
+    copy.type="button";
     copy.textContent="Copy";
+
     copy.onclick=async()=>{
       try{
         await navigator.clipboard.writeText(content.innerText||"");
         copy.textContent="Copied";
         setTimeout(()=>copy.textContent="Copy",1500);
-      }catch{copy.textContent="Failed"}
+      }catch{
+        copy.textContent="Failed";
+      }
     };
 
     tools.append(copy);
     wrap.append(row,tools);
     box.append(wrap);
     bottom();
+
     return content;
   }
 
@@ -247,16 +263,18 @@ function add(role,text){
   wrap.append(row);
   box.append(wrap);
   bottom();
+
   return msg;
 }
 
 function bottom(){
   const x=$("chatBox");
-  requestAnimationFrame(()=>x.scrollTop=x.scrollHeight);
+  if(x)requestAnimationFrame(()=>x.scrollTop=x.scrollHeight);
 }
 
 function state(v){
   sending=v;
+
   $("sendBtn").disabled=v;
   $("stopBtn").style.display=v?"inline-flex":"none";
   $("regenBtn").style.display=!v&&lastQuestion?"inline-flex":"none";
@@ -272,25 +290,23 @@ async function send(question=null,regen=false){
   if(sending)return;
 
   const input=$("userInput");
-  const q=question!==null?String(question).trim():input.value.trim();
+  const q=question!==null?
+    String(question).trim():
+    input.value.trim();
+
   const attached=file;
 
   if(!q&&!attached)return;
-
-  /* Refresh the real Supabase session before every request */
-  await window.refreshToken?.();
-
-  if(!token()){
-    window.showAuthScreen?.();
-    return;
-  }
 
   lastQuestion=q;
   state(true);
 
   if(!regen){
     let display=q;
-    if(attached)display+=(display?"\n":"")+`📎 ${attached.name}`;
+
+    if(attached)
+      display+=(display?"\n":"")+`📎 ${attached.name}`;
+
     add("user",display);
   }
 
@@ -298,14 +314,16 @@ async function send(question=null,regen=false){
   input.style.height="auto";
 
   const form=new FormData();
+
   form.append("question",q);
-  form.append("client_msg_id",id());
+  form.append("client_msg_id",uuid());
   form.append("is_regen",regen?"1":"0");
 
   if(currentChatId!=null)
     form.append("chat_id",String(currentChatId));
 
-  if(attached)form.append("file",attached,attached.name);
+  if(attached)
+    form.append("file",attached,attached.name);
 
   clearFile();
 
@@ -315,35 +333,33 @@ async function send(question=null,regen=false){
   try{
     const r=await fetch(`${API}/api/chat`,{
       method:"POST",
-      headers:{
-        Authorization:`Bearer ${token()}`,
-        Accept:"text/event-stream"
-      },
+      headers:{Accept:"text/event-stream"},
       body:form,
       signal:controller.signal,
       cache:"no-store"
     });
-
-    if(r.status===401){
-      await window.refreshToken?.();
-      throw Error(token()?"Authentication rejected":"Session expired");
-    }
 
     if(r.status===403)throw Error("Access denied");
     if(r.status===409)throw Error("Duplicate message");
     if(!r.ok)throw Error(`Server ${r.status}`);
     if(!r.body)throw Error("Streaming unavailable");
 
-    const reader=r.body.getReader(),decoder=new TextDecoder();
+    const reader=r.body.getReader();
+    const decoder=new TextDecoder();
+
     let buffer="",full="";
 
     const event=raw=>{
       if(!raw.trim())return;
 
       let type="message",data="";
+
       raw.split("\n").forEach(line=>{
-        if(line.startsWith("event:"))type=line.slice(6).trim();
-        if(line.startsWith("data:"))data+=line.slice(5).trim();
+        if(line.startsWith("event:"))
+          type=line.slice(6).trim();
+
+        if(line.startsWith("data:"))
+          data+=line.slice(5).trim();
       });
 
       if(!data)return;
@@ -355,12 +371,18 @@ async function send(question=null,regen=false){
         full+=p.text||"";
         ai.innerHTML=render(full);
         bottom();
-      }else if(type==="chat_id"){
+      }
+
+      else if(type==="chat_id"){
         if(p.chat_id)currentChatId=p.chat_id;
-      }else if(type==="done"){
+      }
+
+      else if(type==="done"){
         if(p.chat_id)currentChatId=p.chat_id;
         loadChats();
-      }else if(type==="error"){
+      }
+
+      else if(type==="error"){
         throw Error(p.message||"AI error");
       }
     };
@@ -370,6 +392,7 @@ async function send(question=null,regen=false){
 
       if(done){
         buffer+=decoder.decode();
+
         if(buffer)event(buffer);
         break;
       }
@@ -379,12 +402,14 @@ async function send(question=null,regen=false){
 
       const parts=buffer.split("\n\n");
       buffer=parts.pop()||"";
+
       parts.forEach(event);
     }
+
   }catch(e){
-    if(e.name==="AbortError")
+    if(e.name==="AbortError"){
       ai.innerHTML="<em>Generation stopped.</em>";
-    else{
+    }else{
       console.error(e);
       ai.innerHTML=render(`**Error**\n\n${e.message}`);
     }
