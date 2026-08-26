@@ -27,7 +27,10 @@ CORS(app, resources={r"/api/*": {"origins": origins}})
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY, options=ClientOptions(auto_refresh_token=False, persist_session=False))
 router = ModelRouter(supabase)
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-logger.info("Brain 3.0 started | version=%s | test_user=%s", VERSION, TEST_USER_ID)
+logger.info(
+    "Brain 3.0 started | version=%s | auth=disabled | test_user=%s",
+    VERSION,TEST_USER_ID
+)
 
 def get_uid(): return TEST_USER_ID
 def allowed_file(filename): return bool(filename and "." in filename and filename.rsplit(".", 1)[1].lower() in {"pdf","txt","md","py","js","ts","jsx","tsx","html","css","csv","json","png","jpg","jpeg","docx"})
