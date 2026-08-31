@@ -1,0 +1,49 @@
+# render.yaml - Place this in your repository root
+services:
+  - type: web
+    name: brain-3-0
+    runtime: python
+    plan: starter  # or professional for more resources
+    region: oregon  # or frankfurt/singapore
+    buildCommand: |
+      pip install -r requirements.txt
+      pip install gunicorn gevent
+    startCommand: |
+      gunicorn --worker-class gevent --workers 4 --bind 0.0.0.0:$PORT --timeout 120 app:app
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: PORT
+        value: 10000
+      - key: FLASK_ENV
+        value: production
+      - key: GROQ_API_KEY
+        sync: false  # Set in Render dashboard
+      - key: TAVILY_API_KEY
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SECRET_KEY
+        sync: false
+      - key: SUPABASE_PUBLISHABLE_KEY
+        sync: false
+      - key: ALLOWED_ORIGINS
+        value: https://your-app-name.onrender.com,https://your-custom-domain.com
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: brain-redis
+          property: connectionString
+    healthCheckPath: /health
+    autoDeploy: true
+    scaling:
+      minInstances: 1
+      maxInstances: 3
+      targetMemoryPercent: 70
+      targetCPUPercent: 70
+
+  - type: redis
+    name: brain-redis
+    plan: starter  # 256MB - free tier
+    maxmemoryPolicy: allkeys-lru
+    ipAllowList: []  # Only allow internal connections
