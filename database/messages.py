@@ -5,17 +5,18 @@ from typing import Optional
 from .client import db
 
 
+ALLOWED_ROLES = {"user", "assistant", "system"}
+
+
 def create_message(
     user_id: str,
     chat_id: str,
     role: str,
     content: str,
-    metadata: Optional[dict] = None,
-    client_message_id: Optional[str] = None,
+    file_meta: Optional[dict] = None,
+    client_msg_id: Optional[str] = None,
 ) -> dict:
-    allowed_roles = {"user", "assistant", "system"}
-
-    if role not in allowed_roles:
+    if role not in ALLOWED_ROLES:
         raise ValueError(f"Invalid message role: {role}")
 
     payload = {
@@ -23,11 +24,13 @@ def create_message(
         "chat_id": str(chat_id),
         "role": role,
         "content": content,
-        "metadata": metadata or {},
     }
 
-    if client_message_id:
-        payload["client_message_id"] = str(client_message_id)
+    if file_meta is not None:
+        payload["file_meta"] = file_meta
+
+    if client_msg_id:
+        payload["client_msg_id"] = str(client_msg_id)
 
     result = db().table("messages").insert(payload).execute()
 
@@ -37,10 +40,7 @@ def create_message(
     return result.data[0]
 
 
-def get_message(
-    message_id: str,
-    user_id: str,
-) -> Optional[dict]:
+def get_message(message_id: str, user_id: str) -> Optional[dict]:
     result = (
         db()
         .table("messages")
