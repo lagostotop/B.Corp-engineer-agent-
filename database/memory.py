@@ -7,18 +7,31 @@ from .client import db
 
 def save_memory(
     user_id: str,
-    content: str,
-    memory_type: str = "general",
-    metadata: Optional[dict] = None,
+    key: str,
+    value: str,
 ) -> dict:
-    payload = {
-        "user_id": str(user_id),
-        "content": content,
-        "memory_type": memory_type,
-        "metadata": metadata or {},
-    }
+    key = str(key).strip()
+    value = str(value).strip()
 
-    result = db().table("brain30_memory").insert(payload).execute()
+    if not key:
+        raise ValueError("Memory key cannot be empty.")
+
+    if not value:
+        raise ValueError("Memory value cannot be empty.")
+
+    result = (
+        db()
+        .table("brain30_memory")
+        .upsert(
+            {
+                "user_id": str(user_id),
+                "key": key,
+                "value": value,
+            },
+            on_conflict="user_id,key",
+        )
+        .execute()
+    )
 
     if not result.data:
         raise RuntimeError("Failed to save memory.")
@@ -28,8 +41,8 @@ def save_memory(
 
 def get_memory(
     user_id: str,
+    key: Optional[str] = None,
     limit: int = 50,
-    memory_type: Optional[str] = None,
 ) -> list:
     limit = max(1, min(int(limit), 200))
 
@@ -38,15 +51,35 @@ def get_memory(
         .table("brain30_memory")
         .select("*")
         .eq("user_id", str(user_id))
-        .order("created_at", desc=True)
+        .order("updated_at", desc=True)
         .limit(limit)
     )
 
-    if memory_type:
-        query = query.eq("memory_type", memory_type)
+    if key:
+        query = query.eq("key", str(key))
 
     result = query.execute()
     return result.data or []
+
+
+def get_memory_value(
+    user_id: str,
+    key: str,
+) -> Optional[str]:
+    result = (
+        db()
+        .table("brain30_memory")
+        .select("value")
+        .eq("user_id", str(user_id))
+        .eq("key", str(key))
+        .maybe_single()
+        .execute()
+    )
+
+    if not result.data:
+        return None
+
+    return result.data.get("value")
 
 
 def delete_memory(
@@ -59,6 +92,22 @@ def delete_memory(
         .delete()
         .eq("id", str(memory_id))
         .eq("user_id", str(user_id))
+        .execute()
+    )
+
+    return bool(result.data)
+
+
+def delete_memory_by_key(
+    user_id: str,
+    key: str,
+) -> bool:
+    result = (
+        db()
+        .table("brain30_memory")
+        .delete()
+        .eq("user_id", str(user_id))
+        .eq("key", str(key))
         .execute()
     )
 
