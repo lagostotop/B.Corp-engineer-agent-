@@ -7,26 +7,22 @@ from .client import db
 
 def create_document(
     user_id: str,
+    chat_id: str,
     content: str,
     embedding: Optional[list] = None,
-    filename: Optional[str] = None,
-    chat_id: Optional[str] = None,
     metadata: Optional[dict] = None,
 ) -> dict:
     payload = {
         "user_id": str(user_id),
+        "chat_id": str(chat_id),
         "content": content,
         "metadata": metadata or {},
     }
 
     if embedding is not None:
+        if len(embedding) != 1536:
+            raise ValueError("Document embedding must contain 1536 values.")
         payload["embedding"] = embedding
-
-    if filename:
-        payload["filename"] = filename[:255]
-
-    if chat_id:
-        payload["chat_id"] = str(chat_id)
 
     result = db().table("documents").insert(payload).execute()
 
@@ -36,10 +32,7 @@ def create_document(
     return result.data[0]
 
 
-def get_document(
-    document_id: str,
-    user_id: str,
-) -> Optional[dict]:
+def get_document(document_id: str, user_id: str) -> Optional[dict]:
     result = (
         db()
         .table("documents")
