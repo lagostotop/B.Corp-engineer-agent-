@@ -1,15 +1,37 @@
-from supabase import create_client
-from config import SUPABASE_URL, SUPABASE_KEY
+from typing import Any,Dict,Optional
+from retrieval.search import RetrievalSearch
 
-supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+class FileSearchTool:
+    name="file_search"
+    description="Search the user's indexed uploaded documents using semantic retrieval."
 
-def search_documents(query: str, user_id: str) -> str:
-    """Search user's uploaded documents in your 'documents' + 'embeddings' tables"""
-    # Simple version: search documents table
-    res = supabase.table("documents").select("name, content").eq("user_id", user_id).ilike("content", f"%{query}%").limit(3).execute()
+    def __init__(self,search:Optional[RetrievalSearch]=None):
+        self.searcher=search or RetrievalSearch()
 
-    docs = res.data
-    if not docs:
-        return "No relevant documents found"
-
-    return "\n".join([f"- {d['name']}: {d['content'][:200]}..." for d in docs])
+    def execute(
+        self,
+        query:str,
+        user_id:str,
+        chat_id:Optional[str]=None,
+        limit:int=5,
+    )->Dict[str,Any]:
+        query=str(query or "").strip()
+        if not query:
+            return {"success":False,"error":"Search query is required."}
+        if not user_id:
+            return {"success":False,"error":"User identity is required."}
+        try:
+            results=self.searcher.search(
+                user_id=str(user_id),
+                query=query,
+                chat_id=chat_id,
+                limit=limit,
+            )
+            return {
+                "success":True,
+                "query":query,
+                "results":results,
+                "context":self.searcher.format_context(results),
+            }
+        except Exception as exc:
+            return {"success":False,"error":f"Document search failed: {exc}"}
