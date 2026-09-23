@@ -1,6 +1,11 @@
 from unittest.mock import MagicMock,patch
 
-from database.documents import create_document,list_documents,get_document,delete_document
+from database.documents import (
+    create_document,
+    list_documents,
+    get_document,
+    delete_document,
+)
 
 
 def test_create_document():
@@ -45,8 +50,8 @@ def test_list_documents():
     ]
 
     with patch("database.documents.db") as mock_db:
-        table=mock_db.return_value.table.return_value
-        table.select.return_value.eq.return_value.order.return_value.limit.return_value.execute.return_value=response
+        query=mock_db.return_value.table.return_value
+        query.select.return_value.eq.return_value.order.return_value.limit.return_value.execute.return_value=response
 
         result=list_documents("user-1")
 
