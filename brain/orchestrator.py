@@ -3,17 +3,31 @@ from .context import BrainContext
 from .model_router import ModelRouter
 from .planner import Planner
 from .verifier import Verifier
+from research.agent import ResearchAgent
 
 class BrainOrchestrator:
-    def __init__(self,router:Optional[ModelRouter]=None):
+    def __init__(self,router:Optional[ModelRouter]=None,research_agent:Optional[ResearchAgent]=None):
         self.router=router or ModelRouter()
         self.planner=Planner()
         self.verifier=Verifier()
+        self.research_agent=research_agent or ResearchAgent()
+
+    def _research(self,context:BrainContext,question:str)->Dict[str,Any]:
+        if not self.planner.needs_tools(question,context.mode):
+            return {"answer":"","used_tools":[],"results":[]}
+        try:
+            return self.research_agent.run(
+                question=question,
+                user_id=context.user_id,
+                chat_id=context.chat_id,
+            )
+        except Exception:
+            return {"answer":"","used_tools":[],"results":[]}
 
     def run(self,context:BrainContext)->Dict[str,Any]:
         question=context.question or context.last_message
         plan=self.planner.plan(question,context.mode)
-        use_agent=self.planner.needs_tools(question,context.mode)
+        research=self._research(context,question)
 
         result=self.router.route(
             messages=context.messages,
@@ -21,9 +35,10 @@ class BrainOrchestrator:
             cid=context.chat_id,
             file_meta=context.file_meta,
             stream=False,
-            force_agent=use_agent,
+            force_agent=False,
             last_user_msg=question,
             mode=context.mode,
+            agent_result=research.get("answer",""),
         )
 
         answer=""
@@ -36,24 +51,27 @@ class BrainOrchestrator:
             if choices:
                 answer=getattr(choices[0].message,"content","") or ""
 
-        answer=self.verifier.finalize(answer,question)
+        answer=self.verifier.finalize(answer,question,research.get("results"))
         return {
             "answer":answer,
             "plan":plan,
             "verified":bool(answer),
-            "used_agent":use_agent,
+            "used_agent":bool(research.get("used_tools")),
+            "used_tools":research.get("used_tools",[]),
         }
 
     def stream(self,context:BrainContext):
         question=context.question or context.last_message
-        use_agent=self.planner.needs_tools(question,context.mode)
+        research=self._research(context,question)
+
         return self.router.route(
             messages=context.messages,
             uid=context.user_id,
             cid=context.chat_id,
             file_meta=context.file_meta,
             stream=True,
-            force_agent=use_agent,
+            force_agent=False,
             last_user_msg=question,
             mode=context.mode,
+            agent_result=research.get("answer",""),
         )
