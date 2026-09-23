@@ -6,15 +6,24 @@ class ResearchAgent:
     def __init__(self):
         self.executor=ToolExecutor()
 
-    def plan(self,question:str)->List[Dict[str,Any]]:
+    def plan(
+        self,
+        question:str,
+        has_file:bool=False
+    )->List[Dict[str,Any]]:
         q=(question or "").lower()
-
         plan=[]
 
-        if any(x in q for x in (
-            "latest","today","news",
-            "current","recent"
-        )):
+        if any(
+            x in q
+            for x in (
+                "latest",
+                "today",
+                "news",
+                "current",
+                "recent"
+            )
+        ):
             plan.append({
                 "tool":"web_search",
                 "args":{
@@ -23,12 +32,18 @@ class ResearchAgent:
                 }
             })
 
-        if any(x in q for x in (
-            "document",
-            "file",
-            "pdf",
-            "upload"
-        )):
+        if has_file or any(
+            x in q
+            for x in (
+                "document",
+                "file",
+                "pdf",
+                "upload",
+                "uploaded",
+                "this file",
+                "this document"
+            )
+        ):
             plan.append({
                 "tool":"file_search",
                 "args":{
@@ -37,11 +52,18 @@ class ResearchAgent:
                 }
             })
 
-        if any(x in q for x in (
-            "+","-","*","/",
-            "calculate",
-            "math"
-        )):
+        if any(
+            x in q
+            for x in (
+                "calculate",
+                "math",
+                "what is",
+                "how much"
+            )
+        ) and any(
+            x in q
+            for x in ("+","-","*","/","=")
+        ):
             plan.append({
                 "tool":"calculator",
                 "args":{
@@ -56,14 +78,18 @@ class ResearchAgent:
         question:str,
         user_id:str,
         chat_id:str=None,
+        has_file:bool=False,
     )->Dict[str,Any]:
-
-        plan=self.plan(question)
+        plan=self.plan(
+            question,
+            has_file=has_file
+        )
 
         if not plan:
             return {
                 "answer":"",
                 "used_tools":[],
+                "results":[]
             }
 
         results=self.executor.run(
@@ -74,6 +100,10 @@ class ResearchAgent:
 
         return {
             "answer":format_research(results),
-            "used_tools":[x["tool"] for x in results],
+            "used_tools":[
+                x["tool"]
+                for x in results
+                if x.get("success")
+            ],
             "results":results,
         }
