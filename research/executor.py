@@ -60,7 +60,7 @@ class ToolExecutor:
 
                 results.append({
                     "tool":tool,
-                    "success=bool(result.get("success")),
+                    "success":bool(result.get("success")),
                     "result":result,
                 })
 
