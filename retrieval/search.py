@@ -4,7 +4,13 @@ from database.client import db
 
 class RetrievalSearch:
     def __init__(self,embedding_service:Optional[EmbeddingService]=None):
-        self.embeddings=embedding_service or EmbeddingService()
+        self._embeddings=embedding_service
+
+    @property
+    def embeddings(self):
+        if self._embeddings is None:
+            self._embeddings=EmbeddingService()
+        return self._embeddings
 
     def search(
         self,
@@ -15,6 +21,9 @@ class RetrievalSearch:
     )->List[Dict[str,Any]]:
         query=str(query or "").strip()
         if not query:return []
+
+        if not user_id:
+            raise ValueError("User identity is required.")
 
         limit=max(1,min(int(limit),20))
         vector=self.embeddings.embed(query)
@@ -38,10 +47,13 @@ class RetrievalSearch:
         for i,item in enumerate(results,1):
             content=str(item.get("content","")).strip()
             if not content:continue
+
             similarity=item.get("similarity")
             label=f"[Document {i}]"
+
             if similarity is not None:
                 label+=f" similarity={float(similarity):.3f}"
+
             parts.append(f"{label}\n{content}")
 
         return "\n\n".join(parts)
