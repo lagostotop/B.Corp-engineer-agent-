@@ -1,30 +1,62 @@
-(()=>{"use strict";
+(()=>{
+"use strict";
 
-const state={chatId:null,chats:[],messages:[],selectedFile:null,sending:false,controller:null};
+const state={
+chatId:null,
+chats:[],
+messages:[],
+selectedFile:null,
+sending:false,
+controller:null
+};
+
 const $=id=>document.getElementById(id);
 
 const el={
-sidebar:$("sidebar"),mobileMenuButton:$("mobileMenuButton"),newChatButton:$("newChatButton"),
-chatList:$("chatList"),messages:$("messages"),welcomeMessage:$("welcomeMessage"),
-chatContainer:$("chatContainer"),messageInput:$("messageInput"),sendButton:$("sendButton"),
-attachButton:$("attachButton"),fileInput:$("fileInput"),filePreview:$("filePreview"),
-fileName:$("fileName"),removeFileButton:$("removeFileButton"),
-connectionStatus:$("connectionStatus"),authButton:$("authButton"),
-authModal:$("authModal"),authCloseButton:$("authCloseButton"),
-authSwitchButton:$("authSwitchButton"),loginForm:$("loginForm"),signupForm:$("signupForm"),
-loginEmail:$("loginEmail"),loginPassword:$("loginPassword"),signupName:$("signupName"),
-signupEmail:$("signupEmail"),signupPassword:$("signupPassword"),authTitle:$("authTitle"),
-authSubtitle:$("authSubtitle"),authError:$("authError"),userAvatar:$("userAvatar"),
-userName:$("userName"),userEmail:$("userEmail")
+sidebar:$("sidebar"),
+sidebarBackdrop:$("sidebarBackdrop"),
+mobileMenuButton:$("mobileMenuButton"),
+newChatButton:$("newChatButton"),
+chatList:$("chatList"),
+messages:$("messages"),
+welcomeMessage:$("welcomeMessage"),
+chatContainer:$("chatContainer"),
+messageInput:$("messageInput"),
+sendButton:$("sendButton"),
+attachButton:$("attachButton"),
+fileInput:$("fileInput"),
+filePreview:$("filePreview"),
+fileName:$("fileName"),
+removeFileButton:$("removeFileButton"),
+connectionStatus:$("connectionStatus"),
+authButton:$("authButton"),
+authModal:$("authModal"),
+authCloseButton:$("authCloseButton"),
+authSwitchButton:$("authSwitchButton"),
+loginForm:$("loginForm"),
+signupForm:$("signupForm"),
+loginEmail:$("loginEmail"),
+loginPassword:$("loginPassword"),
+signupName:$("signupName"),
+signupEmail:$("signupEmail"),
+signupPassword:$("signupPassword"),
+authTitle:$("authTitle"),
+authSubtitle:$("authSubtitle"),
+authError:$("authError"),
+userAvatar:$("userAvatar"),
+userName:$("userName"),
+userEmail:$("userEmail")
 };
 
 const allowedExtensions=new Set([
-"pdf","txt","md","py","js","ts","jsx","tsx","html","css","csv","json",
-"png","jpg","jpeg","docx"
+"pdf","txt","md","py","js","ts","jsx","tsx",
+"html","css","csv","json","png","jpg","jpeg","docx"
 ]);
 
 function setStatus(text){
-if(el.connectionStatus)el.connectionStatus.textContent=text;
+if(el.connectionStatus){
+el.connectionStatus.textContent=text;
+}
 }
 
 function escapeHtml(value){
@@ -38,20 +70,37 @@ return String(value??"")
 
 function renderMarkdown(value){
 const text=String(value??"");
-if(!window.marked)return escapeHtml(text).replace(/\n/g,"<br>");
-const html=window.marked.parse(text,{breaks:true,gfm:true});
-return window.DOMPurify?window.DOMPurify.sanitize(html):html;
+
+if(!window.marked){
+return escapeHtml(text).replace(/\n/g,"<br>");
+}
+
+const html=window.marked.parse(text,{
+breaks:true,
+gfm:true
+});
+
+return window.DOMPurify
+?window.DOMPurify.sanitize(html)
+:html;
 }
 
 function scrollToBottom(){
 requestAnimationFrame(()=>{
-if(el.chatContainer)el.chatContainer.scrollTop=el.chatContainer.scrollHeight;
+if(el.chatContainer){
+el.chatContainer.scrollTop=
+el.chatContainer.scrollHeight;
+}
 });
 }
 
 function updateWelcome(){
-if(el.welcomeMessage)
-el.welcomeMessage.style.display=state.messages.length?"none":"block";
+if(el.welcomeMessage){
+el.welcomeMessage.style.display=
+state.messages.length
+?"none"
+:"block";
+}
 }
 
 function createMessageElement(role,content=""){
@@ -60,13 +109,19 @@ wrapper.className=`message ${role}`;
 
 const avatar=document.createElement("div");
 avatar.className="message-avatar";
-avatar.textContent=role==="user"?"YOU":"B";
+avatar.textContent=
+role==="user"
+?"YOU"
+:"B";
 
 const body=document.createElement("div");
 body.className="message-content";
 
-if(role==="user")body.textContent=content;
-else body.innerHTML=renderMarkdown(content);
+if(role==="user"){
+body.textContent=content;
+}else{
+body.innerHTML=renderMarkdown(content);
+}
 
 wrapper.appendChild(avatar);
 wrapper.appendChild(body);
@@ -75,11 +130,22 @@ return{wrapper,body};
 }
 
 function addMessage(role,content=""){
-const message={role,content:String(content??"")};
+const message={
+role,
+content:String(content??"")
+};
+
 state.messages.push(message);
 
-const rendered=createMessageElement(role,message.content);
-el.messages.appendChild(rendered.wrapper);
+const rendered=
+createMessageElement(
+role,
+message.content
+);
+
+el.messages.appendChild(
+rendered.wrapper
+);
 
 updateWelcome();
 scrollToBottom();
@@ -90,11 +156,19 @@ return rendered;
 function clearMessages(){
 state.messages=[];
 
-while(el.messages.firstChild)
-el.messages.removeChild(el.messages.firstChild);
+if(!el.messages)return;
 
-if(el.welcomeMessage)
-el.messages.appendChild(el.welcomeMessage);
+while(el.messages.firstChild){
+el.messages.removeChild(
+el.messages.firstChild
+);
+}
+
+if(el.welcomeMessage){
+el.messages.appendChild(
+el.welcomeMessage
+);
+}
 
 updateWelcome();
 }
@@ -103,8 +177,18 @@ function renderMessages(messages){
 clearMessages();
 
 for(const message of messages||[]){
-if(message.role!=="user"&&message.role!=="assistant")continue;
-addMessage(message.role,message.content);
+
+if(
+message.role!=="user"&&
+message.role!=="assistant"
+){
+continue;
+}
+
+addMessage(
+message.role,
+message.content
+);
 }
 
 scrollToBottom();
@@ -113,27 +197,46 @@ scrollToBottom();
 function resetComposer(){
 state.selectedFile=null;
 
-if(el.fileInput)el.fileInput.value="";
-if(el.filePreview)el.filePreview.style.display="none";
-if(el.fileName)el.fileName.textContent="";
+if(el.fileInput){
+el.fileInput.value="";
+}
+
+if(el.filePreview){
+el.filePreview.style.display="none";
+}
+
+if(el.fileName){
+el.fileName.textContent="";
+}
 }
 
 function formatBytes(bytes){
 if(!bytes)return"0 B";
 
-const units=["B","KB","MB","GB"];
+const units=[
+"B",
+"KB",
+"MB",
+"GB"
+];
+
 const index=Math.min(
-Math.floor(Math.log(bytes)/Math.log(1024)),
+Math.floor(
+Math.log(bytes)/Math.log(1024)
+),
 units.length-1
 );
 
-return`${(bytes/Math.pow(1024,index)).toFixed(index?1:0)} ${units[index]}`;
+return`${(
+bytes/Math.pow(1024,index)
+).toFixed(index?1:0)} ${units[index]}`;
 }
 
 function selectFile(file){
 if(!file)return;
 
 const name=file.name||"";
+
 const extension=name.includes(".")
 ?name.split(".").pop().toLowerCase()
 :"";
@@ -150,11 +253,14 @@ return;
 
 state.selectedFile=file;
 
-if(el.fileName)
-el.fileName.textContent=`${file.name} (${formatBytes(file.size)})`;
+if(el.fileName){
+el.fileName.textContent=
+`${file.name} (${formatBytes(file.size)})`;
+}
 
-if(el.filePreview)
-el.filePreview.style.display="block";
+if(el.filePreview){
+el.filePreview.style.display="flex";
+}
 
 setStatus("File attached");
 }
@@ -163,15 +269,24 @@ function setSending(value){
 state.sending=Boolean(value);
 
 if(el.sendButton){
-el.sendButton.disabled=state.sending;
-el.sendButton.textContent=state.sending?"■":"↑";
+el.sendButton.disabled=
+state.sending;
+
+el.sendButton.textContent=
+state.sending
+?"■"
+:"↑";
 }
 
-if(el.messageInput)
-el.messageInput.disabled=state.sending;
+if(el.messageInput){
+el.messageInput.disabled=
+state.sending;
+}
 
-if(el.attachButton)
-el.attachButton.disabled=state.sending;
+if(el.attachButton){
+el.attachButton.disabled=
+state.sending;
+}
 }
 
 function showAuthModal(mode="login"){
@@ -179,59 +294,85 @@ if(!el.authModal)return;
 
 el.authModal.style.display="flex";
 
-if(mode==="signup")showSignupForm();
-else showLoginForm();
+if(mode==="signup"){
+showSignupForm();
+}else{
+showLoginForm();
+}
 
-if(el.authError)el.authError.textContent="";
+showAuthError("");
 }
 
 function hideAuthModal(){
-if(el.authModal)
+if(el.authModal){
 el.authModal.style.display="none";
+}
 }
 
 function showLoginForm(){
-if(el.loginForm)el.loginForm.style.display="flex";
-if(el.signupForm)el.signupForm.style.display="none";
+if(el.loginForm){
+el.loginForm.style.display="flex";
+}
 
-if(el.authTitle)el.authTitle.textContent="Welcome back";
+if(el.signupForm){
+el.signupForm.style.display="none";
+}
 
-if(el.authSubtitle)
-el.authSubtitle.textContent="Sign in to continue using Brain 3.0";
+if(el.authTitle){
+el.authTitle.textContent=
+"Welcome back";
+}
 
-if(el.authSwitchButton)
-el.authSwitchButton.textContent="Create an account";
+if(el.authSubtitle){
+el.authSubtitle.textContent=
+"Sign in to continue using Brain 3.0.";
+}
 
-if(el.authError)el.authError.textContent="";
+if(el.authSwitchButton){
+el.authSwitchButton.textContent=
+"Create an account";
+}
 }
 
 function showSignupForm(){
-if(el.loginForm)el.loginForm.style.display="none";
-if(el.signupForm)el.signupForm.style.display="flex";
+if(el.loginForm){
+el.loginForm.style.display="none";
+}
 
-if(el.authTitle)
-el.authTitle.textContent="Create your account";
+if(el.signupForm){
+el.signupForm.style.display="flex";
+}
 
-if(el.authSubtitle)
-el.authSubtitle.textContent="Create an account to start using Brain 3.0";
+if(el.authTitle){
+el.authTitle.textContent=
+"Create your account";
+}
 
-if(el.authSwitchButton)
-el.authSwitchButton.textContent="Already have an account? Sign in";
+if(el.authSubtitle){
+el.authSubtitle.textContent=
+"Create an account to start using Brain 3.0.";
+}
 
-if(el.authError)el.authError.textContent="";
+if(el.authSwitchButton){
+el.authSwitchButton.textContent=
+"Already have an account? Sign in";
+}
 }
 
 function showAuthError(message){
-if(el.authError)
-el.authError.textContent=String(message||"");
+if(el.authError){
+el.authError.textContent=
+String(message||"");
+}
 }
 
 function getAuthUser(){
 if(
 window.BrainAuth&&
 typeof window.BrainAuth.getUser==="function"
-)
+){
 return window.BrainAuth.getUser();
+}
 
 return null;
 }
@@ -242,14 +383,29 @@ return Boolean(getAuthUser());
 
 function updateUserUI(user=null){
 if(!user){
-if(el.userName)el.userName.textContent="Guest";
-if(el.userEmail)el.userEmail.textContent="Not signed in";
-if(el.userAvatar)el.userAvatar.textContent="?";
-if(el.authButton)el.authButton.textContent="Login";
+
+if(el.userName){
+el.userName.textContent="Guest";
+}
+
+if(el.userEmail){
+el.userEmail.textContent=
+"Not signed in";
+}
+
+if(el.userAvatar){
+el.userAvatar.textContent="?";
+}
+
+if(el.authButton){
+el.authButton.textContent="Login";
+}
+
 return;
 }
 
-const metadata=user.user_metadata||{};
+const metadata=
+user.user_metadata||{};
 
 const name=
 metadata.full_name||
@@ -257,25 +413,36 @@ metadata.name||
 user.email?.split("@")[0]||
 "User";
 
-if(el.userName)
+if(el.userName){
 el.userName.textContent=name;
+}
 
-if(el.userEmail)
-el.userEmail.textContent=user.email||"";
+if(el.userEmail){
+el.userEmail.textContent=
+user.email||"";
+}
 
-if(el.userAvatar)
-el.userAvatar.textContent=name.charAt(0).toUpperCase();
+if(el.userAvatar){
+el.userAvatar.textContent=
+name.charAt(0).toUpperCase();
+}
 
-if(el.authButton)
+if(el.authButton){
 el.authButton.textContent="Logout";
+}
 }
 
 async function apiFetch(url,options={}){
 if(
 window.BrainAuth&&
-typeof window.BrainAuth.fetchWithAuth==="function"
-)
-return window.BrainAuth.fetchWithAuth(url,options);
+typeof window.BrainAuth.fetchWithAuth===
+"function"
+){
+return window.BrainAuth.fetchWithAuth(
+url,
+options
+);
+}
 
 return fetch(url,options);
 }
@@ -300,18 +467,24 @@ return;
 }
 
 try{
-const response=await apiFetch("/api/chats");
+
+const response=
+await apiFetch("/api/chats");
 
 if(!response.ok){
+
 if(response.status===401){
 handleUnauthenticated();
 return;
 }
 
-throw new Error(`Failed to load chats (${response.status})`);
+throw new Error(
+`Failed to load chats (${response.status})`
+);
 }
 
-const data=await parseJsonResponse(response);
+const data=
+await parseJsonResponse(response);
 
 state.chats=
 Array.isArray(data)
@@ -323,8 +496,15 @@ Array.isArray(data)
 renderChatList();
 
 }catch(error){
-console.error("loadChats:",error);
-setStatus("Unable to load chats");
+
+console.error(
+"loadChats:",
+error
+);
+
+setStatus(
+"Unable to load chats"
+);
 }
 }
 
@@ -334,89 +514,89 @@ if(!el.chatList)return;
 el.chatList.innerHTML="";
 
 if(!state.chats.length){
-const empty=document.createElement("div");
+
+const empty=
+document.createElement("div");
 
 empty.className="chat-item";
 empty.style.color="#687389";
-empty.textContent="No conversations yet";
+empty.textContent=
+"No conversations yet";
 
 el.chatList.appendChild(empty);
 return;
 }
 
 for(const chat of state.chats){
-const item=document.createElement("div");
+
+const item=
+document.createElement("div");
 
 item.className=
 "chat-item"+
-(String(chat.id)===String(state.chatId)?" active":"");
+(
+String(chat.id)===
+String(state.chatId)
+?" active"
+:""
+);
 
 item.dataset.chatId=chat.id;
 
-item.textContent=
+const title=
+document.createElement("span");
+
+title.className="chat-title";
+title.textContent=
 chat.title||
 chat.name||
 "New conversation";
 
-item.addEventListener("click",()=>openChat(chat.id));
+const deleteButton=
+document.createElement("button");
+
+deleteButton.className=
+"chat-delete";
+
+deleteButton.type="button";
+deleteButton.title="Delete chat";
+deleteButton.textContent="×";
+
+deleteButton.addEventListener(
+"click",
+event=>{
+event.stopPropagation();
+
+deleteChat(
+chat.id
+);
+}
+);
+
+item.appendChild(title);
+item.appendChild(deleteButton);
+
+item.addEventListener(
+"click",
+()=>openChat(chat.id)
+);
 
 el.chatList.appendChild(item);
 }
 }
 
-async function createChat(){
-if(!isAuthenticated()){
-showAuthModal("login");
-return null;
-}
-
-try{
-const response=await apiFetch("/api/chats",{
-method:"POST",
-headers:{"Content-Type":"application/json"},
-body:JSON.stringify({
-title:"New conversation"
-})
-});
-
-const data=await parseJsonResponse(response);
-
-if(!response.ok)
-throw new Error(
-data.error||
-data.message||
-"Failed to create chat."
-);
-
-const chat=data.chat||data;
-
-if(!chat.id)
-throw new Error("Server did not return a chat ID.");
-
-state.chatId=String(chat.id);
+function startNewChat(){
+state.chatId=null;
 state.messages=[];
-
-await loadChats();
-renderMessages([]);
-
-setStatus("Ready");
-
-return chat;
-
-}catch(error){
-console.error("createChat:",error);
-
-setStatus("Unable to create chat");
-
-alert(
-error.message||
-"Unable to create chat."
+clearMessages();
+renderChatList();
+setStatus(
+isAuthenticated()
+?"Ready"
+:"Sign in required"
 );
-
-return null;
+closeMobileSidebar();
 }
-}
-
 async function openChat(chatId){
 if(!chatId)return;
 
@@ -426,40 +606,50 @@ return;
 }
 
 try{
+
 setStatus("Loading...");
 
-const response=await apiFetch(
-`/api/chats/${encodeURIComponent(chatId)}`
+const response=
+await apiFetch(
+`/api/chat/${encodeURIComponent(chatId)}`
 );
 
-const data=await parseJsonResponse(response);
+const data=
+await parseJsonResponse(response);
 
-if(!response.ok)
+if(!response.ok){
 throw new Error(
 data.error||
 data.message||
 "Unable to load conversation."
 );
+}
 
-state.chatId=String(chatId);
+state.chatId=
+String(chatId);
 
 const messages=
-data.messages||
-data.chat?.messages||
-[];
+Array.isArray(data)
+?data
+:data.messages||[];
 
 renderMessages(messages);
 renderChatList();
 
 setStatus("Ready");
 
-if(window.innerWidth<=760)
 closeMobileSidebar();
 
 }catch(error){
-console.error("openChat:",error);
 
-setStatus("Unable to load chat");
+console.error(
+"openChat:",
+error
+);
+
+setStatus(
+"Unable to load chat"
+);
 
 alert(
 error.message||
@@ -469,17 +659,38 @@ error.message||
 }
 
 async function deleteChat(chatId){
-if(!chatId||!isAuthenticated())return;
+if(!chatId||!isAuthenticated()){
+return;
+}
 
-try{
-const response=await apiFetch(
-`/api/chats/${encodeURIComponent(chatId)}`,
-{method:"DELETE"}
+const confirmed=
+window.confirm(
+"Delete this conversation?"
 );
 
-if(!response.ok){
-const data=await parseJsonResponse(response);
+if(!confirmed)return;
 
+try{
+
+const response=
+await apiFetch(
+"/api/chat/delete",
+{
+method:"POST",
+headers:{
+"Content-Type":
+"application/json"
+},
+body:JSON.stringify({
+chat_id:String(chatId)
+})
+}
+);
+
+const data=
+await parseJsonResponse(response);
+
+if(!response.ok){
 throw new Error(
 data.error||
 data.message||
@@ -487,15 +698,24 @@ data.message||
 );
 }
 
-if(String(state.chatId)===String(chatId)){
+if(
+String(state.chatId)===
+String(chatId)
+){
 state.chatId=null;
 clearMessages();
 }
 
 await loadChats();
 
+setStatus("Ready");
+
 }catch(error){
-console.error("deleteChat:",error);
+
+console.error(
+"deleteChat:",
+error
+);
 
 alert(
 error.message||
@@ -511,7 +731,12 @@ const question=
 el.messageInput?.value.trim()||
 "";
 
-if(!question&&!state.selectedFile)return;
+if(
+!question&&
+!state.selectedFile
+){
+return;
+}
 
 if(!isAuthenticated()){
 showAuthModal("login");
@@ -523,25 +748,25 @@ setStatus("Thinking...");
 
 try{
 
-if(!state.chatId){
-const chat=await createChat();
-
-if(!chat)return;
-}
-
-const file=state.selectedFile;
+const file=
+state.selectedFile;
 
 addMessage(
 "user",
 question||
-(file?`Uploaded ${file.name}`:"")
+(file
+?`Uploaded ${file.name}`
+:"")
 );
 
 el.messageInput.value="";
 autoResizeTextarea();
 
 const assistant=
-createMessageElement("assistant","");
+createMessageElement(
+"assistant",
+""
+);
 
 el.messages.appendChild(
 assistant.wrapper
@@ -555,31 +780,50 @@ content:""
 updateWelcome();
 scrollToBottom();
 
-const formData=new FormData();
+const formData=
+new FormData();
 
-/* IMPORTANT: backend uses "question" */
 formData.append(
 "question",
 question
 );
 
+if(state.chatId){
 formData.append(
 "chat_id",
 state.chatId
 );
+}
 
-if(file)
+formData.append(
+"mode",
+"normal"
+);
+
+formData.append(
+"client_msg_id",
+crypto.randomUUID
+?crypto.randomUUID()
+:String(
+Date.now()
+)
+);
+
+if(file){
 formData.append(
 "file",
 file,
 file.name
 );
+}
 
-const controller=new AbortController();
+const controller=
+new AbortController();
 
 state.controller=controller;
 
-const response=await apiFetch(
+const response=
+await apiFetch(
 "/api/chat",
 {
 method:"POST",
@@ -589,7 +833,9 @@ signal:controller.signal
 );
 
 if(!response.ok){
-const data=await parseJsonResponse(response);
+
+const data=
+await parseJsonResponse(response);
 
 throw new Error(
 data.error||
@@ -610,19 +856,25 @@ await loadChats();
 
 }catch(error){
 
-if(error.name==="AbortError"){
+if(
+error.name===
+"AbortError"
+){
 setStatus("Stopped");
 return;
 }
 
-console.error("sendMessage:",error);
+console.error(
+"sendMessage:",
+error
+);
+
+setStatus("Error");
 
 addErrorMessage(
 error.message||
 "Something went wrong while processing your request."
 );
-
-setStatus("Error");
 
 }finally{
 
@@ -631,9 +883,17 @@ setSending(false);
 
 }
 }
-async function consumeStream(response,assistantBody){
+
+async function consumeStream(
+response,
+assistantBody
+){
 if(!response.body){
-const data=await parseJsonResponse(response);
+
+const data=
+await parseJsonResponse(
+response
+);
 
 appendAssistantText(
 assistantBody,
@@ -645,15 +905,19 @@ data.message||
 return;
 }
 
-const reader=response.body.getReader();
-const decoder=new TextDecoder("utf-8");
+const reader=
+response.body.getReader();
+
+const decoder=
+new TextDecoder("utf-8");
 
 let buffer="";
 let finished=false;
 
 while(!finished){
 
-const{value,done}=await reader.read();
+const{value,done}=
+await reader.read();
 
 if(done)break;
 
@@ -663,13 +927,18 @@ value,
 );
 
 const parts=
-buffer.split(/\r?\n\r?\n/);
+buffer.split(
+/\r?\n\r?\n/
+);
 
-buffer=parts.pop()||"";
+buffer=
+parts.pop()||
+"";
 
 for(const part of parts){
 
-const event=parseSSEEvent(part);
+const event=
+parseSSEEvent(part);
 
 if(!event)continue;
 
@@ -680,28 +949,49 @@ assistantBody,
 event.data?.text||""
 );
 
-}else if(event.event==="chat_id"){
+}else if(
+event.event==="chat_id"
+){
 
-if(event.data?.chat_id)
+if(event.data?.chat_id){
+
 state.chatId=
-String(event.data.chat_id);
+String(
+event.data.chat_id
+);
 
-}else if(event.event==="done"){
+renderChatList();
 
-if(event.data?.chat_id)
+}
+
+}else if(
+event.event==="done"
+){
+
+if(event.data?.chat_id){
+
 state.chatId=
-String(event.data.chat_id);
+String(
+event.data.chat_id
+);
+
+}
 
 finished=true;
 
-}else if(event.event==="error"){
+}else if(
+event.event==="error"
+){
 
 throw new Error(
 event.data?.message||
+event.data?.error||
 "The server returned an error."
 );
 
-}else if(event.event==="message"){
+}else if(
+event.event==="message"
+){
 
 appendAssistantText(
 assistantBody,
@@ -718,60 +1008,74 @@ buffer+=decoder.decode();
 
 if(buffer.trim()){
 
-const event=parseSSEEvent(buffer);
+const event=
+parseSSEEvent(buffer);
 
 if(event?.event==="token"){
 
 appendAssistantText(
 assistantBody,
-event.data?.text||""
+event.data?.text||
+""
 );
 
 }
 }
 
-const index=state.messages.length-1;
+const index=
+state.messages.length-1;
 
 if(
 index>=0&&
-state.messages[index].role==="assistant"
+state.messages[index].role===
+"assistant"
 ){
 
 state.messages[index].content=
-assistantBody.dataset.rawContent||"";
-
+assistantBody.dataset.rawContent||
+"";
 }
 }
 
 function parseSSEEvent(block){
-if(!block||!block.trim())
+if(!block||!block.trim()){
 return null;
+}
 
 let eventName="message";
 let dataText="";
 
-for(const line of block.split(/\r?\n/)){
+for(
+const line of block.split(/\r?\n/)
+){
 
-if(line.startsWith("event:"))
-eventName=line.slice(6).trim();
+if(line.startsWith("event:")){
+eventName=
+line.slice(6).trim();
+}else if(
+line.startsWith("data:")
+){
 
-else if(line.startsWith("data:"))
-dataText+=line.slice(5).trim();
-
+dataText+=
+line.slice(5).trim();
+}
 }
 
-if(!dataText)
+if(!dataText){
 return{
 event:eventName,
 data:{}
 };
+}
 
 let data;
 
 try{
 data=JSON.parse(dataText);
 }catch{
-data={text:dataText};
+data={
+text:dataText
+};
 }
 
 return{
@@ -780,15 +1084,18 @@ data
 };
 }
 
-function appendAssistantText(element,text){
+function appendAssistantText(
+element,
+text
+){
 if(!element||!text)return;
 
 const current=
-element.dataset.rawContent||"";
+element.dataset.rawContent||
+"";
 
 const updated=
-current+
-String(text);
+current+String(text);
 
 element.dataset.rawContent=
 updated;
@@ -801,48 +1108,33 @@ state.messages.length-1;
 
 if(
 index>=0&&
-state.messages[index].role==="assistant"
+state.messages[index].role===
+"assistant"
 ){
 
 state.messages[index].content=
 updated;
-
 }
 
 scrollToBottom();
 }
 
 function addErrorMessage(message){
-const wrapper=
-document.createElement("div");
+const rendered=
+createMessageElement(
+"assistant",
+""
+);
 
-wrapper.className=
-"message assistant";
-
-const avatar=
-document.createElement("div");
-
-avatar.className=
-"message-avatar";
-
-avatar.textContent="B";
-
-const body=
-document.createElement("div");
-
-body.className=
-"message-content";
-
-body.style.color=
+rendered.body.style.color=
 "#ff9b9b";
 
-body.textContent=
+rendered.body.textContent=
 message;
 
-wrapper.appendChild(avatar);
-wrapper.appendChild(body);
-
-el.messages.appendChild(wrapper);
+el.messages.appendChild(
+rendered.wrapper
+);
 
 scrollToBottom();
 }
@@ -850,7 +1142,8 @@ scrollToBottom();
 function autoResizeTextarea(){
 if(!el.messageInput)return;
 
-el.messageInput.style.height="auto";
+el.messageInput.style.height=
+"auto";
 
 el.messageInput.style.height=
 `${Math.min(
@@ -860,17 +1153,32 @@ el.messageInput.scrollHeight,
 }
 
 function openMobileSidebar(){
-if(el.sidebar)
+if(el.sidebar){
 el.sidebar.classList.add("open");
 }
 
+if(el.sidebarBackdrop){
+el.sidebarBackdrop.classList.add(
+"show"
+);
+}
+}
+
 function closeMobileSidebar(){
-if(el.sidebar)
-el.sidebar.classList.remove("open");
+if(el.sidebar){
+el.sidebar.classList.remove(
+"open"
+);
+}
+
+if(el.sidebarBackdrop){
+el.sidebarBackdrop.classList.remove(
+"show"
+);
+}
 }
 
 function handleUnauthenticated(){
-
 state.chatId=null;
 state.chats=[];
 state.messages=[];
@@ -879,11 +1187,12 @@ updateUserUI(null);
 renderChatList();
 clearMessages();
 
-setStatus("Sign in required");
+setStatus(
+"Sign in required"
+);
 }
 
 async function handleAuthStateChange(user){
-
 updateUserUI(user);
 
 if(user){
@@ -894,21 +1203,6 @@ setStatus("Ready");
 
 await loadChats();
 
-if(
-state.chatId&&
-state.chats.some(
-chat=>
-String(chat.id)===
-String(state.chatId)
-)
-){
-
-await openChat(
-state.chatId
-);
-
-}
-
 }else{
 
 handleUnauthenticated();
@@ -917,26 +1211,16 @@ handleUnauthenticated();
 }
 
 async function handleAuthButton(){
-
 const user=getAuthUser();
 
 if(!user){
-
 showAuthModal("login");
-
 return;
 }
 
 try{
 
-if(
-window.BrainAuth&&
-typeof window.BrainAuth.signOut==="function"
-){
-
 await window.BrainAuth.signOut();
-
-}
 
 handleUnauthenticated();
 
@@ -951,20 +1235,16 @@ showAuthError(
 error.message||
 "Unable to sign out."
 );
-
 }
 }
 
 async function handleLogin(event){
-
 event.preventDefault();
 
 if(!window.BrainAuth){
-
 showAuthError(
-"Authentication is not ready yet."
+"Authentication is not ready."
 );
-
 return;
 }
 
@@ -978,16 +1258,9 @@ showAuthError("");
 
 try{
 
-const result=
 await window.BrainAuth.signIn(
 email,
 password
-);
-
-if(result?.error)
-throw new Error(
-result.error.message||
-result.error
 );
 
 hideAuthModal();
@@ -1003,20 +1276,16 @@ showAuthError(
 error.message||
 "Unable to sign in."
 );
-
 }
 }
 
 async function handleSignup(event){
-
 event.preventDefault();
 
 if(!window.BrainAuth){
-
 showAuthError(
-"Authentication is not ready yet."
+"Authentication is not ready."
 );
-
 return;
 }
 
@@ -1033,7 +1302,7 @@ showAuthError("");
 
 try{
 
-const result=
+const data=
 await window.BrainAuth.signUp(
 email,
 password,
@@ -1045,21 +1314,15 @@ name
 }
 );
 
-if(result?.error)
-throw new Error(
-result.error.message||
-result.error
-);
+if(data?.session){
 
-if(result?.session===null){
+hideAuthModal();
+
+}else{
 
 showAuthError(
 "Account created. Check your email to confirm your account."
 );
-
-}else{
-
-hideAuthModal();
 
 }
 
@@ -1074,35 +1337,102 @@ showAuthError(
 error.message||
 "Unable to create account."
 );
-
 }
-}
-
-function stopGeneration(){
-
-if(state.controller){
-
-state.controller.abort();
-
-state.controller=null;
-
-}
-
 }
 
 function bindEvents(){
 
-el.sendButton?.addEventListener(
+if(el.newChatButton){
+
+el.newChatButton.addEventListener(
+"click",
+startNewChat
+);
+
+}
+
+if(el.mobileMenuButton){
+
+el.mobileMenuButton.addEventListener(
+"click",
+()=>{
+
+if(
+el.sidebar?.classList.contains(
+"open"
+)
+){
+closeMobileSidebar();
+}else{
+openMobileSidebar();
+}
+
+}
+);
+
+}
+
+if(el.sidebarBackdrop){
+
+el.sidebarBackdrop.addEventListener(
+"click",
+closeMobileSidebar
+);
+
+}
+
+if(el.attachButton){
+
+el.attachButton.addEventListener(
+"click",
+()=>{
+if(!state.sending){
+el.fileInput?.click();
+}
+}
+);
+
+}
+
+if(el.fileInput){
+
+el.fileInput.addEventListener(
+"change",
+event=>{
+selectFile(
+event.target.files?.[0]
+);
+}
+);
+
+}
+
+if(el.removeFileButton){
+
+el.removeFileButton.addEventListener(
+"click",
+resetComposer
+);
+
+}
+
+if(el.sendButton){
+
+el.sendButton.addEventListener(
 "click",
 sendMessage
 );
 
-el.messageInput?.addEventListener(
+}
+
+if(el.messageInput){
+
+el.messageInput.addEventListener(
 "input",
 autoResizeTextarea
 );
 
-el.messageInput?.addEventListener(
+el.messageInput.addEventListener(
 "keydown",
 event=>{
 
@@ -1120,134 +1450,142 @@ sendMessage();
 }
 );
 
-el.attachButton?.addEventListener(
-"click",
-()=>{
-
-if(!state.sending)
-el.fileInput?.click();
-
 }
-);
 
-el.fileInput?.addEventListener(
-"change",
-event=>{
+if(el.authButton){
 
-const file=
-event.target.files?.[0];
-
-if(file)
-selectFile(file);
-
-}
-);
-
-el.removeFileButton?.addEventListener(
-"click",
-resetComposer
-);
-
-el.newChatButton?.addEventListener(
-"click",
-async()=>{
-
-state.chatId=null;
-
-clearMessages();
-resetComposer();
-
-setStatus("Ready");
-
-if(window.innerWidth<=760)
-closeMobileSidebar();
-
-}
-);
-
-el.mobileMenuButton?.addEventListener(
-"click",
-()=>{
-
-if(
-el.sidebar?.classList.contains("open")
-)
-closeMobileSidebar();
-else
-openMobileSidebar();
-
-}
-);
-
-el.authButton?.addEventListener(
+el.authButton.addEventListener(
 "click",
 handleAuthButton
 );
 
-el.authCloseButton?.addEventListener(
+}
+
+if(el.authCloseButton){
+
+el.authCloseButton.addEventListener(
 "click",
 hideAuthModal
 );
 
-el.authSwitchButton?.addEventListener(
+}
+
+if(el.authModal){
+
+el.authModal.addEventListener(
+"click",
+event=>{
+
+if(
+event.target===
+el.authModal
+){
+hideAuthModal();
+}
+
+}
+);
+
+}
+
+if(el.authSwitchButton){
+
+el.authSwitchButton.addEventListener(
 "click",
 ()=>{
 
 if(
-el.signupForm?.style.display==="none"
-)
-showSignupForm();
-else
+el.signupForm?.style.display===
+"flex"
+){
 showLoginForm();
+}else{
+showSignupForm();
+}
 
 }
 );
 
-el.loginForm?.addEventListener(
+}
+
+if(el.loginForm){
+
+el.loginForm.addEventListener(
 "submit",
 handleLogin
 );
 
-el.signupForm?.addEventListener(
+}
+
+if(el.signupForm){
+
+el.signupForm.addEventListener(
 "submit",
 handleSignup
 );
 
-el.authModal?.addEventListener(
-"click",
+}
+}
+
+let touchStartX=0;
+let touchStartY=0;
+
+function bindSwipe(){
+
+if(!el.sidebar)return;
+
+el.sidebar.addEventListener(
+"touchstart",
 event=>{
+
+const touch=
+event.changedTouches[0];
+
+touchStartX=touch.clientX;
+touchStartY=touch.clientY;
+
+},
+{passive:true}
+);
+
+el.sidebar.addEventListener(
+"touchend",
+event=>{
+
+const touch=
+event.changedTouches[0];
+
+const dx=
+touch.clientX-touchStartX;
+
+const dy=
+Math.abs(
+touch.clientY-touchStartY
+);
 
 if(
-event.target===el.authModal
-)
-hideAuthModal();
+dx< -60&&
+dy<80
+){
+
+closeMobileSidebar();
 
 }
+
+},
+{passive:true}
 );
-
-document.addEventListener(
-"keydown",
-event=>{
-
-if(event.key==="Escape"){
-
-if(state.sending)
-stopGeneration();
-else
-hideAuthModal();
-
 }
 
-}
-);
+async function boot(){
 
-}
-
-async function initializeAuth(){
-
-if(!window.BrainAuth){
+bindEvents();
+bindSwipe();
 
 updateUserUI(null);
+setStatus("Connecting...");
+
+if(!window.BrainAuth){
 
 setStatus(
 "Authentication unavailable"
@@ -1256,97 +1594,41 @@ setStatus(
 return;
 }
 
-try{
+window.BrainAuth.onAuthStateChange(
+handleAuthStateChange
+);
 
-if(
-typeof window.BrainAuth.init==="function"
-){
-
+const user=
 await window.BrainAuth.init();
 
-}
-
-const user=getAuthUser();
+if(user){
 
 await handleAuthStateChange(
 user
 );
 
-if(
-typeof window.BrainAuth.onAuthStateChange===
-"function"
-){
-
-window.BrainAuth.onAuthStateChange(
-user=>{
-
-handleAuthStateChange(user)
-.catch(
-error=>
-console.error(
-"auth state:",
-error
-)
-);
-
-}
-);
-
-}
-
-}catch(error){
-
-console.error(
-"initializeAuth:",
-error
-);
-
-updateUserUI(null);
+}else{
 
 setStatus(
-"Authentication unavailable"
+"Sign in required"
 );
 
 }
 }
 
-async function initialize(){
-
-bindEvents();
-
-autoResizeTextarea();
-
-updateWelcome();
-
-setStatus("Connecting...");
-
-await initializeAuth();
-
-}
-
-window.BrainApp={
-sendMessage,
-createChat,
-openChat,
-deleteChat,
-loadChats,
-stopGeneration,
-showAuthModal,
-hideAuthModal,
-getState:()=>({...state})
-};
-
-if(document.readyState==="loading"){
+if(
+document.readyState===
+"loading"
+){
 
 document.addEventListener(
 "DOMContentLoaded",
-initialize,
-{once:true}
+boot
 );
 
 }else{
 
-initialize();
+boot();
 
 }
 
