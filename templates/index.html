@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<meta name="theme-color" content="#0b0f19">
+<meta name="theme-color" content="#080b14">
 <meta name="description" content="Brain 3.0 by B.CORP — AI assistant">
 <title>Brain 3.0 — B.CORP</title>
 
@@ -13,258 +13,700 @@
 
 <style>
 *{box-sizing:border-box}
-html,body{margin:0;width:100%;height:100%;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#0b0f19;color:#f5f7fb}
+html,body{margin:0;width:100%;height:100%;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#080b14;color:#f5f7ff}
 body{overflow:hidden}
 button,input,textarea{font:inherit}
 button{cursor:pointer}
 .app{display:flex;width:100%;height:100vh;overflow:hidden}
 
-.sidebar{width:280px;min-width:280px;background:#0f1420;border-right:1px solid #202738;display:flex;flex-direction:column;height:100%}
-.sidebar-header{padding:18px 16px;border-bottom:1px solid #202738}
+.sidebar{
+width:280px;
+min-width:280px;
+background:#0d1220;
+border-right:1px solid #202a40;
+display:flex;
+flex-direction:column;
+height:100%;
+z-index:900
+}
+
+.sidebar-header{
+padding:18px 16px;
+border-bottom:1px solid #202a40
+}
+
 .brand{display:flex;align-items:center;gap:11px}
-.brand-logo{width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,#6d5dfc,#3b82f6);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:17px}
+
+.brand-logo{
+width:42px;
+height:42px;
+border-radius:12px;
+object-fit:cover;
+display:block;
+box-shadow:0 0 22px rgba(59,130,246,.3)
+}
+
 .brand-text{display:flex;flex-direction:column}
 .brand-title{font-size:16px;font-weight:750}
-.brand-subtitle{font-size:11px;color:#8993a8;margin-top:2px}
+.brand-subtitle{font-size:11px;color:#8995ad;margin-top:2px}
 
-.new-chat{margin:14px 14px 8px;border:1px solid #30394d;background:#151b29;color:#fff;border-radius:10px;padding:11px 13px;text-align:left;font-weight:600}
-.new-chat:hover{background:#1b2333}
+.new-chat{
+margin:14px;
+border:1px solid #30405d;
+background:linear-gradient(135deg,#151e32,#111a2d);
+color:#fff;
+border-radius:12px;
+padding:12px 14px;
+text-align:left;
+font-weight:650;
+transition:.2s
+}
 
-.chat-list{flex:1;overflow-y:auto;padding:8px}
-.chat-item{padding:11px 12px;border-radius:9px;margin-bottom:4px;color:#c6ccda;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:14px}
-.chat-item:hover{background:#171e2c}
-.chat-item.active{background:#1d2637;color:#fff}
+.new-chat:hover{
+background:#1a2740;
+border-color:#4169a5
+}
 
-.sidebar-footer{padding:12px;border-top:1px solid #202738}
-.user-area{display:flex;align-items:center;gap:10px;padding:10px;border-radius:9px}
-.user-avatar{width:34px;height:34px;border-radius:50%;background:#283247;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700}
+.chat-list{
+flex:1;
+overflow-y:auto;
+padding:8px
+}
+
+.chat-item{
+display:flex;
+align-items:center;
+gap:8px;
+padding:10px 10px;
+border-radius:10px;
+margin-bottom:4px;
+color:#c4ccdc;
+font-size:14px;
+transition:.15s;
+cursor:pointer
+}
+
+.chat-item:hover{background:#151e31}
+.chat-item.active{background:#1b2b48;color:#fff}
+
+.chat-title{
+flex:1;
+min-width:0;
+white-space:nowrap;
+overflow:hidden;
+text-overflow:ellipsis
+}
+
+.chat-delete{
+width:30px;
+height:30px;
+border:0;
+border-radius:8px;
+background:transparent;
+color:#71809a;
+font-size:18px;
+flex:none
+}
+
+.chat-delete:hover{
+background:#34202a;
+color:#ff8d9d
+}
+
+.sidebar-footer{
+padding:12px;
+border-top:1px solid #202a40
+}
+
+.user-area{
+display:flex;
+align-items:center;
+gap:10px;
+padding:10px;
+border-radius:10px
+}
+
+.user-avatar{
+width:36px;
+height:36px;
+border-radius:50%;
+background:linear-gradient(135deg,#2563eb,#6366f1);
+display:flex;
+align-items:center;
+justify-content:center;
+font-size:13px;
+font-weight:750
+}
+
 .user-info{min-width:0;flex:1}
-.user-name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.user-email{font-size:11px;color:#7f899c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.auth-button{border:0;background:transparent;color:#aeb7c8;padding:7px;border-radius:7px}
-.auth-button:hover{background:#1a2130;color:#fff}
+.user-name{font-size:13px;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.user-email{font-size:11px;color:#7f8ba3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
-.main{flex:1;min-width:0;height:100%;display:flex;flex-direction:column;background:#0b0f19}
-.topbar{height:60px;min-height:60px;border-bottom:1px solid #202738;display:flex;align-items:center;padding:0 18px;justify-content:space-between}
-.mobile-menu{display:none;border:0;background:transparent;color:#cbd2df;font-size:22px}
-.model-name{font-size:14px;font-weight:650}
-.status{font-size:12px;color:#7e899d}
+.auth-button{
+border:0;
+background:transparent;
+color:#aeb8cc;
+padding:7px;
+border-radius:8px
+}
 
-.chat-container{flex:1;min-height:0;overflow-y:auto}
-.messages{max-width:900px;margin:0 auto;padding:28px 20px 150px}
-.welcome{text-align:center;padding:90px 20px 40px;color:#aab3c4}
-.welcome h1{font-size:30px;color:#fff;margin:0 0 10px}
-.welcome p{margin:0;font-size:14px;line-height:1.7}
+.auth-button:hover{background:#172238;color:#fff}
 
-.message{display:flex;gap:12px;margin:0 0 24px}
+.main{
+flex:1;
+min-width:0;
+height:100%;
+display:flex;
+flex-direction:column;
+background:
+radial-gradient(circle at 50% -20%,rgba(37,99,235,.12),transparent 40%),
+#080b14
+}
+
+.topbar{
+height:62px;
+min-height:62px;
+border-bottom:1px solid #202a40;
+display:flex;
+align-items:center;
+padding:0 18px;
+gap:12px
+}
+
+.mobile-menu{
+display:none;
+border:0;
+background:transparent;
+color:#cbd5e8;
+font-size:23px;
+padding:7px
+}
+
+.model-name{font-size:14px;font-weight:700}
+.status{font-size:12px;color:#7e8ba3;margin-top:2px}
+
+.chat-container{
+flex:1;
+min-height:0;
+overflow-y:auto;
+-webkit-overflow-scrolling:touch
+}
+
+.messages{
+max-width:900px;
+margin:0 auto;
+padding:30px 20px 160px
+}
+
+.welcome{
+text-align:center;
+padding:90px 20px 40px;
+color:#aab5c9
+}
+
+.welcome h1{
+font-size:32px;
+background:linear-gradient(90deg,#60a5fa,#a78bfa,#22d3ee);
+-webkit-background-clip:text;
+background-clip:text;
+color:transparent;
+margin:0 0 12px
+}
+
+.welcome p{
+margin:0;
+font-size:14px;
+line-height:1.7
+}
+
+.message{
+display:flex;
+gap:12px;
+margin:0 0 25px
+}
+
 .message.user{justify-content:flex-end}
-.message-avatar{width:32px;height:32px;min-width:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;background:#202a3d;color:#dbe3f1}
-.message.user .message-avatar{background:#3b82f6;color:#fff;order:2}
-.message-content{max-width:min(760px,85%);line-height:1.65;font-size:15px}
-.message.user .message-content{background:#1b2638;padding:11px 14px;border-radius:15px 15px 4px 15px}
+
+.message-avatar{
+width:32px;
+height:32px;
+min-width:32px;
+border-radius:50%;
+display:flex;
+align-items:center;
+justify-content:center;
+font-size:10px;
+font-weight:750;
+background:#1c2940;
+color:#dce6fa
+}
+
+.message.user .message-avatar{
+background:linear-gradient(135deg,#2563eb,#4f46e5);
+color:#fff;
+order:2
+}
+
+.message-content{
+max-width:min(760px,85%);
+line-height:1.65;
+font-size:15px
+}
+
+.message.user .message-content{
+background:linear-gradient(135deg,#17315d,#172747);
+padding:11px 14px;
+border-radius:16px 16px 4px 16px;
+border:1px solid #29466f
+}
+
 .message.assistant .message-content{padding:3px 0}
+
 .message-content p{margin:0 0 12px}
 .message-content p:last-child{margin-bottom:0}
-.message-content pre{background:#080b12;border:1px solid #242c3d;border-radius:10px;padding:14px;overflow-x:auto}
-.message-content code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
-.message-content :not(pre)>code{background:#1a2130;padding:2px 5px;border-radius:5px;font-size:.9em}
+
+.message-content pre{
+background:#060912;
+border:1px solid #26324a;
+border-radius:10px;
+padding:14px;
+overflow-x:auto
+}
+
+.message-content code{
+font-family:ui-monospace,SFMono-Regular,Menlo,monospace
+}
+
+.message-content :not(pre)>code{
+background:#172239;
+padding:2px 5px;
+border-radius:5px;
+font-size:.9em
+}
+
 .message-content ul,.message-content ol{padding-left:22px}
-.message-content a{color:#73a7ff}
+.message-content a{color:#60a5fa}
 .message-content img{max-width:100%;border-radius:10px}
 
-.composer-area{position:fixed;bottom:0;left:280px;right:0;background:linear-gradient(transparent,#0b0f19 25%);padding:28px 20px 18px}
-.composer{max-width:900px;margin:auto;border:1px solid #30394d;background:#121825;border-radius:15px;box-shadow:0 8px 35px rgba(0,0,0,.25)}
-.file-preview{display:none;padding:10px 14px;border-bottom:1px solid #252d3d;font-size:12px;color:#aeb7c8}
-.composer-row{display:flex;align-items:flex-end;gap:8px;padding:10px}
-.composer textarea{flex:1;resize:none;border:0;outline:0;background:transparent;color:#fff;min-height:42px;max-height:180px;padding:9px 5px;line-height:1.5}
-.composer textarea::placeholder{color:#687389}
-.icon-button{width:40px;height:40px;border:0;background:transparent;color:#9ca7ba;border-radius:9px;display:flex;align-items:center;justify-content:center}
-.icon-button:hover{background:#1c2433;color:#fff}
-.send-button{width:40px;height:40px;border:0;border-radius:10px;background:#3b82f6;color:#fff;font-weight:700}
-.send-button:hover{background:#2563eb}
-.send-button:disabled{opacity:.45;cursor:not-allowed}
-.composer-note{max-width:900px;margin:7px auto 0;text-align:center;color:#626d81;font-size:10px}
+.composer-area{
+position:fixed;
+bottom:0;
+left:280px;
+right:0;
+background:linear-gradient(transparent,#080b14 28%);
+padding:28px 20px 18px;
+z-index:50
+}
 
-.auth-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;z-index:1000;padding:20px}
-.auth-modal{width:min(420px,100%);background:#111725;border:1px solid #30394d;border-radius:16px;padding:24px;box-shadow:0 20px 70px rgba(0,0,0,.45)}
-.auth-modal h2{margin:0 0 6px;font-size:22px}
-.auth-modal p{margin:0 0 20px;color:#8994a8;font-size:13px}
-.auth-form{display:flex;flex-direction:column;gap:12px}
-.auth-form input{width:100%;border:1px solid #30394d;background:#0b101b;color:#fff;border-radius:9px;padding:12px;outline:0}
+.composer{
+max-width:900px;
+margin:auto;
+border:1px solid #30405d;
+background:rgba(15,22,38,.94);
+border-radius:17px;
+box-shadow:0 10px 40px rgba(0,0,0,.35);
+backdrop-filter:blur(12px)
+}
+
+.file-preview{
+display:none;
+padding:10px 14px;
+border-bottom:1px solid #26324a;
+font-size:12px;
+color:#aeb8ca;
+align-items:center;
+justify-content:space-between
+}
+
+.composer-row{
+display:flex;
+align-items:flex-end;
+gap:8px;
+padding:10px
+}
+
+.composer textarea{
+flex:1;
+resize:none;
+border:0;
+outline:0;
+background:transparent;
+color:#fff;
+min-height:42px;
+max-height:180px;
+padding:9px 5px;
+line-height:1.5
+}
+
+.composer textarea::placeholder{color:#66748c}
+
+.icon-button{
+width:40px;
+height:40px;
+border:0;
+background:transparent;
+color:#9ca9c0;
+border-radius:10px;
+display:flex;
+align-items:center;
+justify-content:center
+}
+
+.icon-button:hover{
+background:#1b2942;
+color:#fff
+}
+
+.send-button{
+width:40px;
+height:40px;
+border:0;
+border-radius:11px;
+background:linear-gradient(135deg,#2563eb,#4f46e5);
+color:#fff;
+font-weight:750;
+box-shadow:0 5px 18px rgba(37,99,235,.25)
+}
+
+.send-button:hover{
+background:linear-gradient(135deg,#3b82f6,#6366f1)
+}
+
+.send-button:disabled{
+opacity:.45;
+cursor:not-allowed
+}
+
+.composer-note{
+max-width:900px;
+margin:7px auto 0;
+text-align:center;
+color:#59667c;
+font-size:10px
+}
+
+.sidebar-backdrop{
+display:none;
+position:fixed;
+inset:0;
+background:rgba(0,0,0,.62);
+z-index:850
+}
+
+.sidebar-backdrop.show{display:block}
+
+.auth-overlay{
+position:fixed;
+inset:0;
+background:rgba(0,0,0,.72);
+display:none;
+align-items:center;
+justify-content:center;
+z-index:1000;
+padding:20px
+}
+
+.auth-modal{
+width:min(420px,100%);
+background:#101727;
+border:1px solid #30405d;
+border-radius:18px;
+padding:24px;
+box-shadow:0 20px 70px rgba(0,0,0,.5)
+}
+
+.auth-modal h2{margin:0 0 6px;font-size:23px}
+.auth-modal p{margin:0 0 20px;color:#8995aa;font-size:13px}
+
+.auth-form{
+display:flex;
+flex-direction:column;
+gap:12px
+}
+
+.auth-form input{
+width:100%;
+border:1px solid #30405d;
+background:#080e1a;
+color:#fff;
+border-radius:10px;
+padding:13px;
+outline:0
+}
+
 .auth-form input:focus{border-color:#4d8dff}
-.auth-submit{border:0;background:#3b82f6;color:#fff;border-radius:9px;padding:12px;font-weight:650}
-.auth-switch{border:0;background:transparent;color:#73a7ff;margin-top:13px}
-.auth-close{float:right;border:0;background:transparent;color:#8994a8;font-size:20px}
-.auth-error{color:#ff8e8e;font-size:12px;min-height:16px}
+
+.auth-submit{
+border:0;
+background:linear-gradient(135deg,#2563eb,#4f46e5);
+color:#fff;
+border-radius:10px;
+padding:13px;
+font-weight:700
+}
+
+.auth-switch{
+border:0;
+background:transparent;
+color:#60a5fa;
+margin-top:13px
+}
+
+.auth-close{
+float:right;
+border:0;
+background:transparent;
+color:#8995aa;
+font-size:22px
+}
+
+.auth-error{
+color:#ff8e9a;
+font-size:12px;
+min-height:16px;
+margin-bottom:5px
+}
 
 @media(max-width:760px){
-.sidebar{position:fixed;left:-290px;top:0;z-index:900;transition:left .2s}
+.sidebar{
+position:fixed;
+left:-290px;
+top:0;
+height:100%;
+transition:left .22s ease;
+box-shadow:15px 0 45px rgba(0,0,0,.35)
+}
+
 .sidebar.open{left:0}
 .mobile-menu{display:block}
-.composer-area{left:0;padding-left:12px;padding-right:12px}
-.messages{padding-left:13px;padding-right:13px}
-.topbar{padding:0 12px}
+
+.composer-area{
+left:0;
+padding-left:10px;
+padding-right:10px
+}
+
+.messages{
+padding-left:13px;
+padding-right:13px
+}
+
+.topbar{padding:0 10px}
 .message-content{max-width:90%}
+
+.welcome{padding-top:70px}
+}
+
+@media(max-width:430px){
+.brand-title{font-size:15px}
+.message-content{font-size:14px}
+.auth-modal{padding:20px}
 }
 </style>
 </head>
 
 <body>
+
 <div class="app">
 
 <aside class="sidebar" id="sidebar">
-    <div class="sidebar-header">
-        <div class="brand">
-            <div class="brand-logo">B</div>
-            <div class="brand-text">
-                <div class="brand-title">Brain 3.0</div>
-                <div class="brand-subtitle">by B.CORP</div>
-            </div>
-        </div>
-    </div>
 
-    <button class="new-chat" id="newChatButton">＋ New chat</button>
+<div class="sidebar-header">
+<div class="brand">
+<img class="brand-logo" src="/static/logo.png?v=11" alt="B.CORP">
+<div class="brand-text">
+<div class="brand-title">Brain 3.0</div>
+<div class="brand-subtitle">by B.CORP</div>
+</div>
+</div>
+</div>
 
-    <div class="chat-list" id="chatList"></div>
+<button class="new-chat" id="newChatButton" type="button">
+＋ New chat
+</button>
 
-    <div class="sidebar-footer">
-        <div class="user-area">
-            <div class="user-avatar" id="userAvatar">?</div>
-            <div class="user-info">
-                <div class="user-name" id="userName">Guest</div>
-                <div class="user-email" id="userEmail">Not signed in</div>
-            </div>
-            <button class="auth-button" id="authButton" type="button">Login</button>
-        </div>
-    </div>
+<div class="chat-list" id="chatList"></div>
+
+<div class="sidebar-footer">
+<div class="user-area">
+<div class="user-avatar" id="userAvatar">?</div>
+
+<div class="user-info">
+<div class="user-name" id="userName">Guest</div>
+<div class="user-email" id="userEmail">Not signed in</div>
+</div>
+
+<button class="auth-button" id="authButton" type="button">
+Login
+</button>
+</div>
+</div>
+
 </aside>
 
+<div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
 <main class="main">
-    <header class="topbar">
-        <button class="mobile-menu" id="mobileMenuButton" type="button">☰</button>
 
-        <div>
-            <div class="model-name">Brain 3.0</div>
-            <div class="status" id="connectionStatus">Ready</div>
-        </div>
+<header class="topbar">
 
-        <div></div>
-    </header>
+<button class="mobile-menu" id="mobileMenuButton" type="button">
+☰
+</button>
 
-    <section class="chat-container" id="chatContainer">
-        <div class="messages" id="messages">
-            <div class="welcome" id="welcomeMessage">
-                <h1>How can I help?</h1>
-                <p>Ask Brain 3.0 a question, upload a document, or start a new conversation.</p>
-            </div>
-        </div>
-    </section>
+<div>
+<div class="model-name">Brain 3.0</div>
+<div class="status" id="connectionStatus">Ready</div>
+</div>
+
+</header>
+
+<section class="chat-container" id="chatContainer">
+
+<div class="messages" id="messages">
+
+<div class="welcome" id="welcomeMessage">
+<h1>How can I help?</h1>
+<p>Ask Brain 3.0 a question, upload a document, or start a new conversation.</p>
+</div>
+
+</div>
+
+</section>
+
 </main>
 
 <div class="composer-area">
-    <div class="composer">
 
-        <div class="file-preview" id="filePreview">
-            <span id="fileName"></span>
-            <button class="icon-button" id="removeFileButton" type="button">×</button>
-        </div>
+<div class="composer">
 
-        <div class="composer-row">
-            <button class="icon-button" id="attachButton" type="button" title="Attach file">＋</button>
+<div class="file-preview" id="filePreview">
 
-            <input
-                id="fileInput"
-                type="file"
-                hidden
-                accept=".pdf,.txt,.md,.py,.js,.ts,.jsx,.tsx,.html,.css,.csv,.json,.png,.jpg,.jpeg,.docx"
-            >
+<span id="fileName"></span>
 
-            <textarea
-                id="messageInput"
-                rows="1"
-                placeholder="Message Brain 3.0..."
-                autocomplete="off"
-            ></textarea>
+<button class="icon-button" id="removeFileButton" type="button">
+×
+</button>
 
-            <button class="send-button" id="sendButton" type="button" title="Send">↑</button>
-        </div>
-    </div>
+</div>
 
-    <div class="composer-note">
-        Brain 3.0 can make mistakes. Verify important information.
-    </div>
+<div class="composer-row">
+
+<button class="icon-button" id="attachButton" type="button" title="Attach file">
+＋
+</button>
+
+<input
+id="fileInput"
+type="file"
+hidden
+accept=".pdf,.txt,.md,.py,.js,.ts,.jsx,.tsx,.html,.css,.csv,.json,.png,.jpg,.jpeg,.docx"
+>
+
+<textarea
+id="messageInput"
+rows="1"
+placeholder="Message Brain 3.0..."
+autocomplete="off"
+></textarea>
+
+<button class="send-button" id="sendButton" type="button">
+↑
+</button>
+
+</div>
+
+</div>
+
+<div class="composer-note">
+Brain 3.0 can make mistakes. Verify important information.
+</div>
+
 </div>
 
 </div>
 
 <div class="auth-overlay" id="authModal">
-    <div class="auth-modal">
 
-        <button class="auth-close" id="authCloseButton" type="button">×</button>
+<div class="auth-modal">
 
-        <h2 id="authTitle">Welcome back</h2>
-        <p id="authSubtitle">Sign in to continue using Brain 3.0.</p>
+<button class="auth-close" id="authCloseButton" type="button">×</button>
 
-        <div class="auth-error" id="authError"></div>
+<h2 id="authTitle">Welcome back</h2>
 
-        <form class="auth-form" id="loginForm">
-            <input
-                id="loginEmail"
-                type="email"
-                placeholder="Email"
-                autocomplete="email"
-                required
-            >
+<p id="authSubtitle">
+Sign in to continue using Brain 3.0.
+</p>
 
-            <input
-                id="loginPassword"
-                type="password"
-                placeholder="Password"
-                autocomplete="current-password"
-                required
-            >
+<div class="auth-error" id="authError"></div>
 
-            <button class="auth-submit" type="submit">Sign in</button>
-        </form>
+<form class="auth-form" id="loginForm">
 
-        <form class="auth-form" id="signupForm" style="display:none">
-            <input
-                id="signupName"
-                type="text"
-                placeholder="Name"
-                autocomplete="name"
-                required
-            >
+<input
+id="loginEmail"
+type="email"
+placeholder="Email"
+autocomplete="email"
+required
+>
 
-            <input
-                id="signupEmail"
-                type="email"
-                placeholder="Email"
-                autocomplete="email"
-                required
-            >
+<input
+id="loginPassword"
+type="password"
+placeholder="Password"
+autocomplete="current-password"
+required
+>
 
-            <input
-                id="signupPassword"
-                type="password"
-                placeholder="Password"
-                autocomplete="new-password"
-                minlength="6"
-                required
-            >
+<button class="auth-submit" type="submit">
+Sign in
+</button>
 
-            <button class="auth-submit" type="submit">Create account</button>
-        </form>
+</form>
 
-        <button class="auth-switch" id="authSwitchButton" type="button">
-            Create an account
-        </button>
+<form class="auth-form" id="signupForm" style="display:none">
 
-    </div>
+<input
+id="signupName"
+type="text"
+placeholder="Name"
+autocomplete="name"
+required
+>
+
+<input
+id="signupEmail"
+type="email"
+placeholder="Email"
+autocomplete="email"
+required
+>
+
+<input
+id="signupPassword"
+type="password"
+placeholder="Password"
+autocomplete="new-password"
+minlength="6"
+required
+>
+
+<button class="auth-submit" type="submit">
+Create account
+</button>
+
+</form>
+
+<button class="auth-switch" id="authSwitchButton" type="button">
+Create an account
+</button>
+
 </div>
 
-<script src="/static/auth.js?v=10.2.0"></script>
-<script src="/static/app.js?v=10.2.0"></script>
+</div>
+
+<script src="/static/auth.js?v=11"></script>
+<script src="/static/app.js?v=11"></script>
 
 </body>
 </html>
