@@ -26,8 +26,9 @@ class Settings:
     allowed_origins: Optional[List[str]]=None
 
     supabase_url: str=os.getenv("SUPABASE_URL","")
-    supabase_service_role_key: str=os.getenv("SUPABASE_SERVICE_ROLE_KEY","")
-    supabase_anon_key: str=os.getenv("SUPABASE_ANON_KEY","")
+    supabase_publishable_key =       
+str=os.getenv("SUPABASE_PUBLISHABLE_KEY", "")
+supabase_secret_key = str=os.getenv("SUPABASE_SECRET_KEY", "")
 
     groq_api_key: str=os.getenv("GROQ_API_KEY","")
     openai_api_key: str=os.getenv("OPENAI_API_KEY","")
