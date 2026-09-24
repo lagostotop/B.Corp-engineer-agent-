@@ -2,18 +2,17 @@
 
 from functools import lru_cache
 
-from supabase import Client, ClientOptions, create_client
+from supabase import Client,ClientOptions,create_client
 
 from core.config import settings
 
 
 @lru_cache(maxsize=1)
-def get_supabase() -> Client:
+def get_supabase()->Client:
     settings.validate()
-
     return create_client(
         settings.supabase_url,
-        settings.supabase_service_role_key,
+        settings.supabase_secret_key,
         options=ClientOptions(
             auto_refresh_token=False,
             persist_session=False,
@@ -23,5 +22,5 @@ def get_supabase() -> Client:
     )
 
 
-def db() -> Client:
+def db()->Client:
     return get_supabase()
