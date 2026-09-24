@@ -9,25 +9,19 @@
   "orientation": "portrait",
   "background_color": "#0A0A0F",
   "theme_color": "#00BFFF",
-  "categories": ["productivity", "education", "utilities", "business"],
-  "version": "3.5.7",
+  "categories": [
+    "productivity",
+    "education",
+    "utilities",
+    "business"
+  ],
+  "version": "3.5.8",
   "icons": [
-    { 
-      "src": "/static/icon-192.png", 
-      "sizes": "192x192", 
-      "type": "image/png", 
-      "purpose": "any maskable" 
-    },
-    { 
-      "src": "/static/icon-512.png", 
-      "sizes": "512x512", 
-      "type": "image/png", 
-      "purpose": "any maskable" 
-    },
-    { 
-      "src": "/static/icon-180.png", 
-      "sizes": "180x180", 
-      "type": "image/png" 
+    {
+      "src": "/static/logo.png",
+      "sizes": "1536x1536",
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ],
   "shortcuts": [
@@ -53,4 +47,4 @@
       "label": "Brain 3.0 Chat Interface"
     }
   ]
-    }
+}
