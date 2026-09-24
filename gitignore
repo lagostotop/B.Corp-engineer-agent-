@@ -65,12 +65,10 @@ tmp/
 
 # ========================================
 # PWA
-# DO NOT IGNORE - REQUIRED BY APP
+# REQUIRED APP FILES
 # ========================================
 
-!static/icon-180.png
-!static/icon-192.png
-!static/icon-512.png
+!static/logo.png
 !static/sw.js
 !static/manifest.json
 !static/favicon.ico
