@@ -98,6 +98,7 @@ def create_app():
         data=request.get_json(silent=True) or {}
         title=str(data.get("title","New Chat")).strip()[:200] or "New Chat"
         return jsonify({"chat":create_chat(uid,title)}),201
+    
     @app.get("/health")
 def health():
     from database.client import test_database_connection
