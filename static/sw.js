@@ -1,85 +1,79 @@
-/* =========================================================
-   BRAIN 3.0 SERVICE WORKER v5.5.6
-   Production PWA with Network-First API
-   ========================================================= */
+const CACHE_NAME="brain3-frontend-v11";
 
-const CACHE_NAME = "brain3-cache-v5-5-6";
-
-const STATIC_CACHE = [
-  "/",
-  "/static/manifest.json?v=5-5-6",
-  "/static/app.js?v=5-5-6",
-  "/static/logo.png"
+const STATIC_ASSETS=[
+"/",
+"/static/style.css?v=11",
+"/static/app.js?v=11",
+"/static/auth.js?v=11",
+"/static/manifest.json",
+"/static/logo.png",
+"/static/icon-192.png",
+"/static/icon-512.png"
 ];
 
-// INSTALL
 self.addEventListener("install",event=>{
-  self.skipWaiting();
-  event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(cache=>cache.addAll(STATIC_CACHE))
-      .catch(err=>console.log("Brain 3.0 SW: Cache failed:",err))
-  );
+self.skipWaiting();
+
+event.waitUntil(
+caches.open(CACHE_NAME)
+.then(cache=>cache.addAll(STATIC_ASSETS))
+.catch(error=>console.warn("Brain 3.0 cache install:",error))
+);
 });
 
-// ACTIVATE
 self.addEventListener("activate",event=>{
-  event.waitUntil(
-    caches.keys().then(cacheNames=>
-      Promise.all(
-        cacheNames
-          .filter(name=>name!==CACHE_NAME)
-          .map(name=>caches.delete(name))
-      )
-    )
-  );
-  self.clients.claim();
-  console.log("Brain 3.0 SW: Activated v5.5.6");
+event.waitUntil(
+caches.keys()
+.then(keys=>
+Promise.all(
+keys
+.filter(key=>key!==CACHE_NAME)
+.map(key=>caches.delete(key))
+)
+)
+.then(()=>self.clients.claim())
+);
 });
 
-// FETCH
 self.addEventListener("fetch",event=>{
-  const url=new URL(event.request.url);
+const request=event.request;
 
-  // NEVER CACHE API/auth/external resources
-  if(
-    event.request.method!=="GET"||
-    url.pathname.startsWith("/api/")||
-    url.hostname.includes("supabase")||
-    url.hostname.includes("cdn.jsdelivr")||
-    url.hostname.includes("fonts.googleapis")||
-    url.hostname.includes("fonts.gstatic")
-  ){
-    return;
-  }
+if(request.method!=="GET")return;
 
-  // HTML: network first, cached fallback
-  if(
-    event.request.mode==="navigate"||
-    event.request.headers.get("accept")?.includes("text/html")
-  ){
-    event.respondWith(
-      fetch(event.request).catch(()=>caches.match("/"))
-    );
-    return;
-  }
+const url=new URL(request.url);
 
-  // Static assets: cache first, network fallback/update
-  event.respondWith(
-    caches.match(event.request).then(cached=>{
-      const fetchPromise=fetch(event.request)
-        .then(response=>{
-          if(response&&response.status===200){
-            const responseClone=response.clone();
-            caches.open(CACHE_NAME).then(cache=>{
-              cache.put(event.request,responseClone);
-            });
-          }
-          return response;
-        })
-        .catch(()=>cached);
+if(
+url.pathname.startsWith("/api/")||
+url.hostname.includes("supabase")||
+url.hostname.includes("cdn.jsdelivr.net")
+){
+return;
+}
 
-      return cached||fetchPromise;
-    })
-  );
+if(request.mode==="navigate"){
+event.respondWith(
+fetch(request)
+.catch(()=>caches.match("/"))
+);
+return;
+}
+
+event.respondWith(
+caches.match(request)
+.then(cached=>{
+const network=fetch(request)
+.then(response=>{
+if(response&&response.ok){
+const clone=response.clone();
+
+caches.open(CACHE_NAME)
+.then(cache=>cache.put(request,clone));
+}
+return response;
+})
+.catch(()=>cached);
+
+return cached||network;
+})
+);
 });
