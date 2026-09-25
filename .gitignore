@@ -1,0 +1,74 @@
+# ========================================
+# B.CORP SECRETS - NEVER COMMIT THESE
+# ========================================
+
+.env
+.env.*
+!.env.example
+
+credentials.json
+*.key
+*.pem
+*.crt
+*.cer
+*.p12
+*.pfx
+
+# IMPORTANT:
+# config.py IS SAFE TO COMMIT because it reads
+# secrets from environment variables.
+!config.py
+
+# ========================================
+# PYTHON
+# ========================================
+
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+venv/
+.venv/
+env/
+ENV/
+
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ========================================
+# OS + IDE
+# ========================================
+
+.DS_Store
+Thumbs.db
+
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ========================================
+# LOGS + TEMP
+# ========================================
+
+*.log
+logs/
+tmp/
+*.tmp
+
+*.mp3
+*.wav
+*.ogg
+
+# ========================================
+# PWA
+# REQUIRED APP FILES
+# ========================================
+
+!static/logo.png
+!static/sw.js
+!static/manifest.json
+!static/favicon.ico
