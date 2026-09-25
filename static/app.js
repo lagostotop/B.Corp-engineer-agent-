@@ -393,3 +393,507 @@ console.error(error);
 alert(errorText(error,"Unable to delete chat."));
 }
 }
+function resizeTextarea(){
+const input=el.messageInput;
+if(!input)return;
+input.style.height="auto";
+input.style.height=Math.min(input.scrollHeight,190)+"px";
+}
+
+async function readSSE(stream,onEvent){
+const reader=stream.getReader();
+const decoder=new TextDecoder();
+let buffer="";
+
+while(true){
+const{value,done}=await reader.read();
+if(done)break;
+
+buffer+=decoder.decode(value,{stream:true});
+
+const blocks=buffer.split("\n\n");
+buffer=blocks.pop()||"";
+
+for(const block of blocks){
+let event="message";
+let data="";
+
+for(const line of block.split("\n")){
+if(line.startsWith("event:"))
+event=line.slice(6).trim();
+else if(line.startsWith("data:"))
+data+=line.slice(5).trim();
+}
+
+if(!data)continue;
+
+let parsed;
+try{parsed=JSON.parse(data)}
+catch{parsed={text:data}};
+
+onEvent({event,data:parsed});
+}
+}
+
+if(buffer.trim()){
+let event="message";
+let data="";
+
+for(const line of buffer.split("\n")){
+if(line.startsWith("event:"))event=line.slice(6).trim();
+else if(line.startsWith("data:"))data+=line.slice(5).trim();
+}
+
+if(data){
+let parsed;
+try{parsed=JSON.parse(data)}
+catch{parsed={text:data}};
+onEvent({event,data:parsed});
+}
+}
+}
+
+async function sendMessage(){
+if(state.sending)return;
+
+const question=el.messageInput.value.trim();
+const file=state.selectedFile;
+
+if(!question&&!file)return;
+
+if(!authenticated()){
+showAuth();
+return;
+}
+
+state.sending=true;
+state.controller=new AbortController();
+
+el.sendButton.disabled=true;
+el.messageInput.disabled=true;
+el.attachButton.disabled=true;
+status("Thinking...");
+
+const visibleText=question||(file?`Uploaded ${file.name}`:"");
+addMessage("user",visibleText);
+
+el.messageInput.value="";
+resizeTextarea();
+
+const assistant=addMessage("assistant","");
+const assistantIndex=state.messages.length-1;
+
+try{
+const form=new FormData();
+
+form.append("question",question);
+
+if(state.chatId)
+form.append("chat_id",String(state.chatId));
+
+if(file)
+form.append("file",file);
+
+const response=await api("/api/chat",{
+method:"POST",
+body:form,
+signal:state.controller.signal,
+headers:{Accept:"text/event-stream"}
+});
+
+if(response.status===401){
+handleLogout();
+throw new Error("Your session expired. Please sign in again.");
+}
+
+if(!response.ok){
+const data=await responseData(response);
+throw new Error(errorText(data,`Request failed (${response.status})`));
+}
+
+if(!response.body)
+throw new Error("Streaming is not supported by this browser.");
+
+await readSSE(response.body,event=>{
+if(event.event==="chat_id"){
+if(event.data?.chat_id){
+state.chatId=String(event.data.chat_id);
+renderChats();
+}
+return;
+}
+
+if(event.event==="token"){
+const text=event.data?.text||event.data?.token||"";
+if(!text)return;
+
+state.messages[assistantIndex].content+=text;
+assistant.body.innerHTML=markdown(state.messages[assistantIndex].content);
+scrollBottom();
+return;
+}
+
+if(event.event==="message"){
+const text=event.data?.text||event.data?.message||"";
+if(!text)return;
+
+state.messages[assistantIndex].content+=text;
+assistant.body.innerHTML=markdown(state.messages[assistantIndex].content);
+scrollBottom();
+return;
+}
+
+if(event.event==="error"){
+throw new Error(event.data?.message||"Brain generation failed.");
+}
+});
+
+if(state.chatId)await loadChats();
+
+status("Ready");
+resetFile();
+
+}catch(error){
+if(error.name==="AbortError"){
+status("Stopped");
+}else{
+console.error("sendMessage:",error);
+
+if(assistant.body){
+assistant.body.innerHTML=
+`<p style="color:#fb7185">${escapeHtml(errorText(error,"Brain generation failed."))}</p>`;
+}
+
+status("Error");
+}
+}finally{
+state.sending=false;
+state.controller=null;
+
+el.sendButton.disabled=false;
+el.messageInput.disabled=false;
+el.attachButton.disabled=false;
+
+el.sendButton.innerHTML=`
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+<path d="M22 2 11 13"/>
+<path d="m22 2-7 20-4-9-9-4Z"/>
+</svg>`;
+
+el.messageInput.focus();
+}
+}
+
+function handleLogout(){
+state.chatId=null;
+state.chats=[];
+state.messages=[];
+clearMessages();
+renderChats();
+updateUserUI(null);
+status("Signed out");
+closeSidebar();
+}
+
+async function authLogin(event){
+event.preventDefault();
+
+try{
+showAuthError("");
+status("Signing in...");
+
+await window.BrainAuth.signIn(
+el.loginEmail.value,
+el.loginPassword.value
+);
+
+hideAuth();
+updateUserUI(authUser());
+await loadChats();
+
+status("Ready");
+el.messageInput.focus();
+}catch(error){
+showAuthError(error);
+status("Authentication error");
+}
+}
+
+async function authSignup(event){
+event.preventDefault();
+
+try{
+showAuthError("");
+status("Creating account...");
+
+const result=await window.BrainAuth.signUp(
+el.signupEmail.value,
+el.signupPassword.value,
+{
+data:{
+full_name:el.signupName.value.trim()
+}
+}
+);
+
+if(!result.session){
+showAuthError("Account created. Check your email if confirmation is required.");
+return;
+}
+
+hideAuth();
+updateUserUI(authUser());
+await loadChats();
+status("Ready");
+}catch(error){
+showAuthError(error);
+status("Authentication error");
+}
+}
+
+async function authButtonAction(){
+if(authenticated()){
+try{
+await window.BrainAuth.signOut();
+handleLogout();
+}catch(error){
+showAuthError(error);
+}
+}else{
+showAuth();
+}
+}
+
+function voiceInput(){
+const SpeechRecognition=
+window.SpeechRecognition||
+window.webkitSpeechRecognition;
+
+if(!SpeechRecognition){
+status("Voice input is not supported");
+return;
+}
+
+const recognition=new SpeechRecognition();
+recognition.lang="en-US";
+recognition.interimResults=true;
+
+status("Listening...");
+
+recognition.onresult=e=>{
+let text="";
+
+for(const result of e.results)
+text+=result[0].transcript;
+
+el.messageInput.value=text;
+resizeTextarea();
+};
+
+recognition.onerror=()=>{
+status("Voice input failed");
+};
+
+recognition.onend=()=>{
+if(!state.sending)status("Ready");
+};
+
+recognition.start();
+}
+
+function filterChats(){
+const query=prompt("Search conversations:");
+
+if(query===null)return;
+
+const q=query.trim().toLowerCase();
+
+if(!q){
+renderChats();
+return;
+}
+
+const original=state.chats;
+
+const matches=original.filter(chat=>
+String(chat.title||chat.name||"")
+.toLowerCase()
+.includes(q)
+);
+
+el.chatList.innerHTML="";
+
+if(!matches.length){
+const empty=document.createElement("div");
+empty.className="chat-empty";
+empty.textContent="No matching conversations";
+el.chatList.appendChild(empty);
+return;
+}
+
+for(const chat of matches){
+const item=document.createElement("div");
+item.className="chat-item"+(String(chat.id)===String(state.chatId)?" active":"");
+
+const icon=document.createElement("span");
+icon.className="chat-icon";
+icon.textContent="◦";
+
+const title=document.createElement("span");
+title.className="chat-title";
+title.textContent=chat.title||"New conversation";
+
+item.append(icon,title);
+item.onclick=()=>openChat(chat.id);
+el.chatList.appendChild(item);
+}
+}
+
+function bind(){
+el.newChatButton?.addEventListener("click",newChat);
+el.newChatTopButton?.addEventListener("click",newChat);
+el.clearChatButton?.addEventListener("click",newChat);
+
+el.mobileMenuButton?.addEventListener("click",openSidebar);
+el.sidebarBackdrop?.addEventListener("click",closeSidebar);
+
+el.chatSearchButton?.addEventListener("click",filterChats);
+
+el.authButton?.addEventListener("click",authButtonAction);
+el.authCloseButton?.addEventListener("click",hideAuth);
+
+el.authModal?.addEventListener("click",e=>{
+if(e.target===el.authModal)hideAuth();
+});
+
+el.authSwitchButton?.addEventListener("click",()=>{
+const signup=el.signupForm.style.display!=="none";
+showAuth(signup?"login":"signup");
+});
+
+el.loginForm?.addEventListener("submit",authLogin);
+el.signupForm?.addEventListener("submit",authSignup);
+
+el.attachButton?.addEventListener("click",()=>{
+el.fileInput.click();
+});
+
+el.fileInput?.addEventListener("change",()=>{
+chooseFile(el.fileInput.files?.[0]);
+});
+
+el.removeFileButton?.addEventListener("click",()=>{
+resetFile();
+status("Ready");
+});
+
+el.voiceButton?.addEventListener("click",voiceInput);
+
+el.messageInput?.addEventListener("input",resizeTextarea);
+
+el.messageInput?.addEventListener("keydown",e=>{
+if(e.key==="Enter"&&!e.shiftKey){
+e.preventDefault();
+sendMessage();
+}
+});
+
+document.getElementById("composerForm")?.addEventListener("submit",e=>{
+e.preventDefault();
+sendMessage();
+});
+
+document.querySelectorAll("[data-prompt]").forEach(button=>{
+button.addEventListener("click",()=>{
+el.messageInput.value=button.dataset.prompt||"";
+resizeTextarea();
+el.messageInput.focus();
+});
+});
+
+document.addEventListener("keydown",e=>{
+if(e.key==="Escape"){
+hideAuth();
+closeSidebar();
+}
+});
+
+let startX=0;
+
+el.sidebar?.addEventListener("touchstart",e=>{
+startX=e.touches[0].clientX;
+},{passive:true});
+
+el.sidebar?.addEventListener("touchend",e=>{
+const endX=e.changedTouches[0].clientX;
+
+if(startX-endX>70)
+closeSidebar();
+},{passive:true});
+
+document.addEventListener("touchstart",e=>{
+state.touchStartX=e.touches[0].clientX;
+state.touchStartY=e.touches[0].clientY;
+},{passive:true});
+
+document.addEventListener("touchend",e=>{
+const endX=e.changedTouches[0].clientX;
+const endY=e.changedTouches[0].clientY;
+
+const dx=endX-state.touchStartX;
+const dy=Math.abs(endY-state.touchStartY);
+
+if(dy>80)return;
+
+if(window.innerWidth<=900){
+if(dx>80&&state.touchStartX<35){
+openSidebar();
+}else if(dx<-80&&el.sidebar.classList.contains("open")){
+closeSidebar();
+}
+}
+},{passive:true});
+}
+
+async function init(){
+bind();
+resizeTextarea();
+
+if(!window.BrainAuth){
+status("Authentication unavailable");
+return;
+}
+
+try{
+const user=await window.BrainAuth.init();
+
+updateUserUI(user);
+
+window.BrainAuth.onAuthStateChange(async currentUser=>{
+updateUserUI(currentUser);
+
+if(currentUser){
+await loadChats();
+}else{
+handleLogout();
+}
+});
+
+if(user){
+await loadChats();
+status("Ready");
+}else{
+status("Sign in to chat");
+}
+}catch(error){
+console.error(error);
+status("Ready");
+}
+}
+
+if(document.readyState==="loading")
+document.addEventListener("DOMContentLoaded",init);
+else
+init();
+
+})();
