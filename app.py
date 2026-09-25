@@ -74,13 +74,7 @@ def create_app():
     @app.get("/api/auth/config")
     def auth_config():
         publishable_key=getattr(settings,"supabase_publishable_key",None) or getattr(settings,"supabase_anon_key","") or ""
-        return jsonify({
-            "supabase_url":settings.supabase_url,
-            "supabase_publishable_key":publishable_key,
-            "supabase_anon_key":publishable_key,
-            "auth_enabled":bool(settings.supabase_url and publishable_key),
-            "version":VERSION
-        })
+        return jsonify({"supabase_url":settings.supabase_url,"supabase_publishable_key":publishable_key,"supabase_anon_key":publishable_key,"auth_enabled":bool(settings.supabase_url and publishable_key),"version":VERSION})
 
     @app.get("/api/auth/me")
     @auth_required
@@ -88,11 +82,7 @@ def create_app():
         user=getattr(g,"user",None)
         if user is None:
             return jsonify({"error":"Authentication required.","code":"AUTHENTICATION_REQUIRED"}),401
-        return jsonify({"user":{
-            "id":str(user.id),
-            "email":getattr(user,"email",None),
-            "user_metadata":getattr(user,"user_metadata",{}) or {}
-        }})
+        return jsonify({"user":{"id":str(user.id),"email":getattr(user,"email",None),"user_metadata":getattr(user,"user_metadata",{}) or {}}})
 
     @app.get("/api/chats")
     @auth_required
@@ -109,19 +99,19 @@ def create_app():
         return jsonify({"chat":create_chat(uid,title)}),201
 
     @app.get("/health")
-def health():
-    database=test_database_connection()
-    return jsonify({
-        "status":"ok" if database["ok"] else "degraded",
-        "service":settings.app_name,
-        "version":VERSION,
-        "environment":settings.environment,
-        "database":"connected" if database["ok"] else "disconnected",
-        "database_test":database,
-        "auth":"enabled",
-        "brain":"orchestrator",
-        "rest_test":test_rest_connection()
-    })
+    def health():
+        database=test_database_connection()
+        return jsonify({
+            "status":"ok" if database["ok"] else "degraded",
+            "service":settings.app_name,
+            "version":VERSION,
+            "environment":settings.environment,
+            "database":"connected" if database["ok"] else "disconnected",
+            "database_test":database,
+            "auth":"enabled",
+            "brain":"orchestrator",
+            "rest_test":test_rest_connection()
+        })
 
     @app.get("/api/chats/<chat_id>")
     @auth_required
@@ -176,7 +166,6 @@ def health():
 
         if len(question)>20000:
             return jsonify({"error":"Question too long.","code":"QUESTION_TOO_LONG"}),413
-
         if not question and not uploaded_file:
             return jsonify({"error":"Empty request.","code":"EMPTY_REQUEST"}),400
 
@@ -203,12 +192,10 @@ def health():
 
         if uploaded_file and uploaded_file.filename:
             original_name=uploaded_file.filename
-
             if not allowed_file(original_name):
                 return jsonify({"error":"File type not allowed.","code":"FILE_TYPE_NOT_ALLOWED"}),400
 
             safe_name=secure_filename(original_name)
-
             if not safe_name:
                 return jsonify({"error":"Invalid filename.","code":"INVALID_FILENAME"}),400
 
@@ -229,12 +216,7 @@ def health():
 
                 if not is_image_file(original_name):
                     try:
-                        result=FileIngestionService().ingest(
-                            path=filepath,
-                            filename=original_name,
-                            user_id=uid,
-                            chat_id=chat_id
-                        )
+                        result=FileIngestionService().ingest(path=filepath,filename=original_name,user_id=uid,chat_id=chat_id)
                         if not result.get("success"):
                             logger.warning("File ingestion failed: %s",result.get("error","unknown error"))
                         else:
@@ -264,14 +246,7 @@ def health():
                 return jsonify({"error":"Failed to save message.","code":"MESSAGE_SAVE_FAILED"}),500
 
         messages=list_messages(chat_id,uid,limit=200)
-        context=build_context(
-            user_id=uid,
-            chat_id=chat_id,
-            question=question,
-            messages=messages,
-            mode=mode,
-            file_meta=file_meta
-        )
+        context=build_context(user_id=uid,chat_id=chat_id,question=question,messages=messages,mode=mode,file_meta=file_meta)
 
         def generate():
             full=""
@@ -283,22 +258,17 @@ def health():
                     choices=getattr(chunk,"choices",None)
                     if not choices:
                         continue
-
                     delta=getattr(choices[0],"delta",None)
                     text=getattr(delta,"content",None)
-
                     if not text:
                         continue
-
                     full+=text
                     yield f"event: token\ndata: {json.dumps({'text':text},ensure_ascii=False)}\n\n"
 
                 if full.strip():
                     create_message(uid,chat_id,"assistant",full)
                     try:
-                        db().table("chats").update({
-                            "updated_at":datetime.now(timezone.utc).isoformat()
-                        }).eq("id",chat_id).eq("user_id",uid).execute()
+                        db().table("chats").update({"updated_at":datetime.now(timezone.utc).isoformat()}).eq("id",chat_id).eq("user_id",uid).execute()
                     except Exception:
                         logger.exception("Failed to update chat timestamp")
 
@@ -312,30 +282,15 @@ def health():
                         os.remove(filepath)
                     except OSError:
                         pass
-
                 yield f"event: done\ndata: {json.dumps({'chat_id':chat_id})}\n\n"
 
-        response=Response(
-            stream_with_context(generate()),
-            mimetype="text/event-stream"
-        )
-
-        response.headers.update({
-            "Cache-Control":"no-cache",
-            "X-Accel-Buffering":"no",
-            "Connection":"keep-alive"
-        })
-
+        response=Response(stream_with_context(generate()),mimetype="text/event-stream")
+        response.headers.update({"Cache-Control":"no-cache","X-Accel-Buffering":"no","Connection":"keep-alive"})
         return response
 
     @app.errorhandler(RequestEntityTooLarge)
     def request_too_large(error):
-        return jsonify({
-            "error":{
-                "code":"REQUEST_TOO_LARGE",
-                "message":"Request exceeds the allowed size."
-            }
-        }),413
+        return jsonify({"error":{"code":"REQUEST_TOO_LARGE","message":"Request exceeds the allowed size."}}),413
 
     return app
 
