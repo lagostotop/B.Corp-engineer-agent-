@@ -9,7 +9,7 @@ from core.config import settings
 from core.errors import register_error_handlers
 from core.logging import configure_logging,start_request_context
 from core.security import authenticate_request,current_user_id
-from database.client import db,test_database_connection
+from database.client import db,test_database_connection,test_rest_connection
 from database.chats import create_chat,delete_chat,get_chat,list_chats
 from database.messages import create_message,list_messages
 from brain.context import build_context
@@ -109,19 +109,19 @@ def create_app():
         return jsonify({"chat":create_chat(uid,title)}),201
 
     @app.get("/health")
-    def health():
-        database=test_database_connection()
-        return jsonify({
-            "status":"ok" if database["ok"] else "degraded",
-            "service":settings.app_name,
-            "version":VERSION,
-            "environment":settings.environment,
-            "database":"connected" if database["ok"] else "disconnected",
-            "database_test":database,
-            "auth":"enabled",
-            "brain":"orchestrator"
-"rest_test":test_rest_connection(),
-        })
+def health():
+    database=test_database_connection()
+    return jsonify({
+        "status":"ok" if database["ok"] else "degraded",
+        "service":settings.app_name,
+        "version":VERSION,
+        "environment":settings.environment,
+        "database":"connected" if database["ok"] else "disconnected",
+        "database_test":database,
+        "auth":"enabled",
+        "brain":"orchestrator",
+        "rest_test":test_rest_connection()
+    })
 
     @app.get("/api/chats/<chat_id>")
     @auth_required
