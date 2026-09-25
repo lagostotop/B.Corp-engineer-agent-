@@ -11,7 +11,7 @@ openai>=1.50.0
 tavily-python==0.5.1
 
 # Database
-supabase>=2.18.0
+supabase==2.5.2
 psycopg2-binary==2.9.9
 
 # Cache (Use Redis on Render)
