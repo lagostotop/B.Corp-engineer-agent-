@@ -19,13 +19,10 @@ throw new Error(`Authentication configuration failed (${response.status})`);
 
 const config=await response.json();
 
-const url=config.supabase_url;
-const publishableKey=
-config.supabase_publishable_key||
-config.supabase_anon_key||
-"";
+const url=config.supabase_url||"";
+const key=config.supabase_publishable_key||config.supabase_anon_key||"";
 
-if(!url||!publishableKey){
+if(!url||!key){
 throw new Error("Authentication is not configured.");
 }
 
@@ -33,10 +30,7 @@ if(!window.supabase){
 throw new Error("Supabase client unavailable.");
 }
 
-this.supabase=window.supabase.createClient(
-url,
-publishableKey
-);
+this.supabase=window.supabase.createClient(url,key);
 
 const{data,error}=await this.supabase.auth.getSession();
 
@@ -46,23 +40,20 @@ this.session=data.session||null;
 this.user=this.session?.user||null;
 this.initialized=true;
 
-this.supabase.auth.onAuthStateChange((_,session)=>{
+this.supabase.auth.onAuthStateChange((event,session)=>{
 this.session=session||null;
 this.user=session?.user||null;
 
 this.updateUI(this.user);
 
 for(const listener of this.listeners){
-Promise.resolve(
-listener(this.user)
-).catch(console.error);
+Promise.resolve(listener(this.user,event)).catch(console.error);
 }
 });
 
 this.updateUI(this.user);
 
 return this.user;
-
 }catch(error){
 console.error("Auth initialization failed:",error);
 
@@ -89,14 +80,17 @@ getUser(){
 return this.user;
 }
 
+isAuthenticated(){
+return Boolean(this.user&&this.session);
+}
+
 async signIn(email,password){
 if(!this.supabase){
 throw new Error("Authentication is not configured.");
 }
 
-const{data,error}=
-await this.supabase.auth.signInWithPassword({
-email,
+const{data,error}=await this.supabase.auth.signInWithPassword({
+email:String(email).trim(),
 password
 });
 
@@ -115,26 +109,29 @@ if(!this.supabase){
 throw new Error("Authentication is not configured.");
 }
 
-const{data,error}=
-await this.supabase.auth.signUp({
-email,
+const{data,error}=await this.supabase.auth.signUp({
+email:String(email).trim(),
 password,
 options
 });
 
 if(error)throw error;
 
-if(data.session){
-this.session=data.session;
+this.session=data.session||null;
 this.user=data.user||null;
+
 this.updateUI(this.user);
-}
 
 return data;
 }
 
 async signOut(){
-if(!this.supabase)return;
+if(!this.supabase){
+this.session=null;
+this.user=null;
+this.updateUI(null);
+return;
+}
 
 const{error}=await this.supabase.auth.signOut();
 
@@ -148,22 +145,16 @@ this.updateUI(null);
 
 getAuthHeader(){
 const token=this.session?.access_token;
-
-return token
-?`Bearer ${token}`
-:null;
+return token?`Bearer ${token}`:null;
 }
 
 async fetchWithAuth(url,options={}){
 const makeRequest=async()=>{
-const headers=new Headers(
-options.headers||{}
-);
-
+const headers=new Headers(options.headers||{});
 const token=this.getAuthHeader();
 
 if(token){
-headers.set("Authorization",token);
+headers.set("Authorization",`Bearer ${token}`);
 }
 
 return fetch(url,{
@@ -179,8 +170,7 @@ return response;
 }
 
 try{
-const{data,error}=
-await this.supabase.auth.refreshSession();
+const{data,error}=await this.supabase.auth.refreshSession();
 
 if(error||!data.session){
 this.session=null;
@@ -197,12 +187,12 @@ this.updateUI(this.user);
 response=await makeRequest();
 
 return response;
-
 }catch(error){
 console.error("Session refresh failed:",error);
 
 this.session=null;
 this.user=null;
+
 this.updateUI(null);
 
 return response;
@@ -215,7 +205,14 @@ const name=document.getElementById("userName");
 const email=document.getElementById("userEmail");
 const button=document.getElementById("authButton");
 
-if(user){
+if(!user){
+if(avatar)avatar.textContent="?";
+if(name)name.textContent="Guest";
+if(email)email.textContent="Not signed in";
+if(button)button.textContent="Login";
+return;
+}
+
 const metadata=user.user_metadata||{};
 
 const display=
@@ -239,15 +236,6 @@ email.textContent=user.email||"";
 
 if(button){
 button.textContent="Logout";
-}
-
-}else{
-
-if(avatar)avatar.textContent="?";
-if(name)name.textContent="Guest";
-if(email)email.textContent="Not signed in";
-if(button)button.textContent="Login";
-
 }
 }
 }
