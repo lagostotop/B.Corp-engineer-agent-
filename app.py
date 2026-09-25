@@ -84,15 +84,6 @@ def create_app():
             return jsonify({"error":"Authentication required.","code":"AUTHENTICATION_REQUIRED"}),401
         return jsonify({"user":{"id":str(user.id),"email":getattr(user,"email",None),"user_metadata":getattr(user,"user_metadata",{}) or {}}})
 
-    @app.get("/health")
-    def health():
-        database_ok=False
-        try:
-            db().table("chats").select("id").limit(1).execute()
-            database_ok=True
-        except Exception:
-            logger.exception("Health database check failed")
-        return jsonify({"status":"ok" if database_ok else "degraded","service":settings.app_name,"version":VERSION,"environment":settings.environment,"database":"connected" if database_ok else "disconnected","auth":"enabled","brain":"orchestrator"})
 
     @app.get("/api/chats")
     @auth_required
@@ -107,7 +98,22 @@ def create_app():
         data=request.get_json(silent=True) or {}
         title=str(data.get("title","New Chat")).strip()[:200] or "New Chat"
         return jsonify({"chat":create_chat(uid,title)}),201
+    @app.get("/health")
+def health():
+    from database.client import test_database_connection
 
+    database = test_database_connection()
+
+    return jsonify({
+        "status": "ok" if database["ok"] else "degraded",
+        "service": settings.app_name,
+        "version": VERSION,
+        "environment": settings.environment,
+        "database": "connected" if database["ok"] else "disconnected",
+        "database_test": database,
+        "auth": "enabled",
+        "brain": "orchestrator",
+    })
     @app.get("/api/chats/<chat_id>")
     @auth_required
     def get_chat_compat_route(chat_id):
