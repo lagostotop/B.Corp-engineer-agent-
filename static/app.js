@@ -85,6 +85,54 @@ return window.DOMPurify
 :html;
 }
 
+/* Normalize every possible API/SSE error shape into a string.
+   Prevents JavaScript from displaying "[object Object]". */
+function getErrorMessage(value,fallback="Something went wrong."){
+if(value instanceof Error){
+return value.message||fallback;
+}
+
+if(typeof value==="string"){
+return value.trim()||fallback;
+}
+
+if(value&&typeof value==="object"){
+if(typeof value.message==="string"&&value.message.trim()){
+return value.message.trim();
+}
+
+if(typeof value.error==="string"&&value.error.trim()){
+return value.error.trim();
+}
+
+if(value.error&&typeof value.error==="object"){
+if(
+typeof value.error.message==="string"&&
+value.error.message.trim()
+){
+return value.error.message.trim();
+}
+
+if(
+typeof value.error.detail==="string"&&
+value.error.detail.trim()
+){
+return value.error.detail.trim();
+}
+}
+
+if(typeof value.detail==="string"&&value.detail.trim()){
+return value.detail.trim();
+}
+
+if(typeof value.data==="string"&&value.data.trim()){
+return value.data.trim();
+}
+}
+
+return fallback;
+}
+
 function scrollToBottom(){
 requestAnimationFrame(()=>{
 if(el.chatContainer){
@@ -362,7 +410,10 @@ el.authSwitchButton.textContent=
 function showAuthError(message){
 if(el.authError){
 el.authError.textContent=
-String(message||"");
+getErrorMessage(
+message,
+""
+);
 }
 }
 
@@ -478,8 +529,14 @@ handleUnauthenticated();
 return;
 }
 
+const data=
+await parseJsonResponse(response);
+
 throw new Error(
+getErrorMessage(
+data,
 `Failed to load chats (${response.status})`
+)
 );
 }
 
@@ -566,7 +623,6 @@ deleteButton.addEventListener(
 "click",
 event=>{
 event.stopPropagation();
-
 deleteChat(
 chat.id
 );
@@ -597,6 +653,7 @@ isAuthenticated()
 );
 closeMobileSidebar();
 }
+
 async function openChat(chatId){
 if(!chatId)return;
 
@@ -619,9 +676,10 @@ await parseJsonResponse(response);
 
 if(!response.ok){
 throw new Error(
-data.error||
-data.message||
+getErrorMessage(
+data,
 "Unable to load conversation."
+)
 );
 }
 
@@ -652,8 +710,10 @@ setStatus(
 );
 
 alert(
-error.message||
+getErrorMessage(
+error,
 "Unable to load chat."
+)
 );
 }
 }
@@ -692,9 +752,10 @@ await parseJsonResponse(response);
 
 if(!response.ok){
 throw new Error(
-data.error||
-data.message||
+getErrorMessage(
+data,
 "Unable to delete chat."
+)
 );
 }
 
@@ -718,12 +779,13 @@ error
 );
 
 alert(
-error.message||
+getErrorMessage(
+error,
 "Unable to delete chat."
+)
 );
 }
 }
-
 async function sendMessage(){
 if(state.sending)return;
 
@@ -746,6 +808,8 @@ return;
 setSending(true);
 setStatus("Thinking...");
 
+let assistant=null;
+
 try{
 
 const file=
@@ -762,7 +826,7 @@ question||
 el.messageInput.value="";
 autoResizeTextarea();
 
-const assistant=
+assistant=
 createMessageElement(
 "assistant",
 ""
@@ -804,9 +868,7 @@ formData.append(
 "client_msg_id",
 crypto.randomUUID
 ?crypto.randomUUID()
-:String(
-Date.now()
-)
+:String(Date.now())
 );
 
 if(file){
@@ -838,9 +900,10 @@ const data=
 await parseJsonResponse(response);
 
 throw new Error(
-data.error||
-data.message||
+getErrorMessage(
+data,
 `Chat request failed (${response.status})`
+)
 );
 }
 
@@ -871,10 +934,42 @@ error
 
 setStatus("Error");
 
-addErrorMessage(
-error.message||
+const message=
+getErrorMessage(
+error,
 "Something went wrong while processing your request."
 );
+
+if(assistant){
+
+assistant.body.dataset.rawContent=
+message;
+
+assistant.body.style.color=
+"#ff9b9b";
+
+assistant.body.textContent=
+message;
+
+const index=
+state.messages.length-1;
+
+if(
+index>=0&&
+state.messages[index].role===
+"assistant"
+){
+state.messages[index].content=
+message;
+}
+
+scrollToBottom();
+
+}else{
+
+addErrorMessage(message);
+
+}
 
 }finally{
 
@@ -895,11 +990,18 @@ await parseJsonResponse(
 response
 );
 
-appendAssistantText(
-assistantBody,
+const message=
 data.answer||
 data.message||
+data.error||
+"";
+
+appendAssistantText(
+assistantBody,
+getErrorMessage(
+message,
 ""
+)
 );
 
 return;
@@ -984,9 +1086,10 @@ event.event==="error"
 ){
 
 throw new Error(
-event.data?.message||
-event.data?.error||
+getErrorMessage(
+event.data,
 "The server returned an error."
+)
 );
 
 }else if(
@@ -1017,6 +1120,28 @@ appendAssistantText(
 assistantBody,
 event.data?.text||
 ""
+);
+
+}else if(
+event?.event==="message"
+){
+
+appendAssistantText(
+assistantBody,
+event.data?.text||
+event.data?.content||
+""
+);
+
+}else if(
+event?.event==="error"
+){
+
+throw new Error(
+getErrorMessage(
+event.data,
+"The server returned an error."
+)
 );
 
 }
@@ -1120,6 +1245,12 @@ scrollToBottom();
 }
 
 function addErrorMessage(message){
+const safeMessage=
+getErrorMessage(
+message,
+"Something went wrong."
+);
+
 const rendered=
 createMessageElement(
 "assistant",
@@ -1130,7 +1261,7 @@ rendered.body.style.color=
 "#ff9b9b";
 
 rendered.body.textContent=
-message;
+safeMessage;
 
 el.messages.appendChild(
 rendered.wrapper
@@ -1232,8 +1363,10 @@ error
 );
 
 showAuthError(
-error.message||
+getErrorMessage(
+error,
 "Unable to sign out."
+)
 );
 }
 }
@@ -1273,8 +1406,10 @@ error
 );
 
 showAuthError(
-error.message||
+getErrorMessage(
+error,
 "Unable to sign in."
+)
 );
 }
 }
@@ -1334,8 +1469,10 @@ error
 );
 
 showAuthError(
-error.message||
+getErrorMessage(
+error,
 "Unable to create account."
+)
 );
 }
 }
@@ -1541,8 +1678,11 @@ event=>{
 const touch=
 event.changedTouches[0];
 
-touchStartX=touch.clientX;
-touchStartY=touch.clientY;
+touchStartX=
+touch.clientX;
+
+touchStartY=
+touch.clientY;
 
 },
 {passive:true}
