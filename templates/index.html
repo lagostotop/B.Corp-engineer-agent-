@@ -3,62 +3,71 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#080b14">
+<meta name="theme-color" content="#080b12">
 <meta name="color-scheme" content="dark">
-<meta name="description" content="Brain 3.0 by B.CORP — intelligent AI assistant">
+<meta name="description" content="Brain 3.0 — B.CORP intelligent AI assistant.">
 <meta name="application-name" content="Brain 3.0">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="manifest" href="/static/manifest.json">
-<link rel="icon" href="/static/logo.png">
+<link rel="icon" href="/static/favicon.ico">
 <link rel="apple-touch-icon" href="/static/icon-192.png">
-<link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="/static/style.css?v=11">
 <title>Brain 3.0 — B.CORP</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
-
 <body>
+
 <div class="app">
 
 <aside class="sidebar" id="sidebar">
+
 <div class="sidebar-header">
+
 <div class="brand">
-<img class="brand-logo" src="/static/logo.png" alt="B.CORP Brain 3.0">
+<img class="brand-logo" src="/static/logo.png" alt="Brain 3.0">
 <div class="brand-text">
 <div class="brand-title">Brain 3.0</div>
 <div class="brand-subtitle">B.CORP Intelligence</div>
 </div>
 </div>
-</div>
 
-<div class="sidebar-actions">
 <button class="new-chat" id="newChatButton" type="button">
 <span class="new-chat-icon">+</span>
 <span>New chat</span>
 </button>
 
+<div class="sidebar-actions">
 <button class="sidebar-search-button" id="chatSearchButton" type="button">
-<span>⌕</span>
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+<circle cx="11" cy="11" r="7"/>
+<path d="m20 20-4-4"/>
+</svg>
 <span>Search chats</span>
-<span class="shortcut">⌘K</span>
 </button>
+
+<button class="clear-chat-button" id="clearChatButton" type="button" title="New chat">＋</button>
 </div>
 
-<div class="chat-list" id="chatList"></div>
+</div>
 
-<div class="sidebar-footer">
-<div class="user-area">
+<div class="chat-history">
+<div class="history-label">Recent</div>
+<div class="chat-list" id="chatList"></div>
+</div>
+
+<div class="sidebar-bottom">
+<div class="user-card">
 <div class="user-avatar" id="userAvatar">?</div>
 <div class="user-info">
 <div class="user-name" id="userName">Guest</div>
 <div class="user-email" id="userEmail">Not signed in</div>
 </div>
+</div>
+
 <button class="auth-button" id="authButton" type="button">Login</button>
 </div>
-</div>
+
 </aside>
 
 <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
@@ -66,33 +75,50 @@
 <main class="main">
 
 <header class="topbar">
+
 <div class="topbar-left">
+
 <button class="mobile-menu" id="mobileMenuButton" type="button" aria-label="Open menu">
-<span></span><span></span><span></span>
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+<path d="M4 6h16M4 12h16M4 18h16"/>
+</svg>
 </button>
 
-<button class="model-selector" id="modelSelector" type="button">
-<span class="model-mark">
+<button class="model-selector" type="button">
+<div class="model-mark">
 <img src="/static/logo.png" alt="">
-</span>
-<span class="model-info">
-<strong>Brain 3.0</strong>
-<small id="connectionStatus">Ready</small>
-</span>
+</div>
+<div class="model-info">
+<span class="model-name">Brain 3.0</span>
+<span class="model-subtitle">B.CORP AI</span>
+</div>
 <span class="model-chevron">⌄</span>
 </button>
+
 </div>
 
 <div class="topbar-right">
-<button class="top-action" id="newChatTopButton" type="button" title="New chat">＋</button>
-<button class="top-action" id="clearChatButton" type="button" title="Clear conversation">⌫</button>
+
+<div class="connection">
+<span class="connection-dot"></span>
+<span id="connectionStatus">Ready</span>
+</div>
+
+<button class="top-action" id="newChatTopButton" type="button" title="New chat">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+<path d="M12 5v14M5 12h14"/>
+</svg>
+</button>
+
 </div>
 </header>
 
 <section class="chat-container" id="chatContainer">
+
 <div class="messages" id="messages">
 
 <div class="welcome" id="welcomeMessage">
+
 <div class="welcome-logo">
 <img src="/static/logo.png" alt="Brain 3.0">
 </div>
@@ -100,34 +126,32 @@
 <h1>How can I help you today?</h1>
 
 <p>
-Ask questions, analyze information, write code, explore ideas,
-or upload a document for Brain 3.0 to work with.
+Brain 3.0 is your B.CORP AI workspace for research,
+reasoning, coding, documents and complex tasks.
 </p>
 
 <div class="suggestion-grid">
-<button class="suggestion" type="button" data-prompt="Explain a difficult technical concept to me simply.">
-<span class="suggestion-icon">✦</span>
-<span class="suggestion-title">Explain a concept</span>
-<span class="suggestion-sub">Make something difficult easy to understand</span>
-</button>
 
-<button class="suggestion" type="button" data-prompt="Help me design and build a software project.">
-<span class="suggestion-icon">⌘</span>
-<span class="suggestion-title">Build something</span>
-<span class="suggestion-sub">Plan and develop a project</span>
-</button>
-
-<button class="suggestion" type="button" data-prompt="Help me analyze this problem and find possible solutions.">
-<span class="suggestion-icon">⌁</span>
-<span class="suggestion-title">Analyze a problem</span>
-<span class="suggestion-sub">Break a complex problem down</span>
-</button>
-
-<button class="suggestion" type="button" data-prompt="Teach me something useful about technology, engineering, AI, or business.">
-<span class="suggestion-icon">◈</span>
+<button class="suggestion" type="button" data-prompt="Explain this concept to me step by step.">
 <span class="suggestion-title">Learn something</span>
-<span class="suggestion-sub">Explore technology and ideas</span>
+<span class="suggestion-sub">Explain a difficult concept clearly</span>
 </button>
+
+<button class="suggestion" type="button" data-prompt="Help me build a software project and give me the architecture.">
+<span class="suggestion-title">Build a project</span>
+<span class="suggestion-sub">Plan software, systems or products</span>
+</button>
+
+<button class="suggestion" type="button" data-prompt="Analyze this problem and give me practical solutions.">
+<span class="suggestion-title">Analyze a problem</span>
+<span class="suggestion-sub">Break down a difficult challenge</span>
+</button>
+
+<button class="suggestion" type="button" data-prompt="Help me research this topic and identify the important facts.">
+<span class="suggestion-title">Research</span>
+<span class="suggestion-sub">Explore a topic deeply</span>
+</button>
+
 </div>
 </div>
 
@@ -135,58 +159,51 @@ or upload a document for Brain 3.0 to work with.
 </section>
 
 <div class="composer-area">
+
 <div class="composer-wrap">
 
 <div class="file-preview" id="filePreview">
-<div class="file-preview-icon">📎</div>
-<div class="file-preview-info">
-<strong id="fileName">File</strong>
-<span id="fileMeta"></span>
-</div>
+<span>📎</span>
+<span class="file-preview-name" id="fileName"></span>
+<span class="file-preview-meta" id="fileMeta"></span>
 <button class="file-remove" id="removeFileButton" type="button">×</button>
 </div>
 
-<div class="composer">
-<div class="composer-row">
+<form class="composer" id="composerForm">
 
-<button class="icon-button attach-button" id="attachButton" type="button" title="Attach file" aria-label="Attach file">
+<button class="attach-button" id="attachButton" type="button" title="Attach file">
 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
 </svg>
 </button>
 
-<input
-id="fileInput"
-type="file"
-hidden
-accept=".pdf,.txt,.md,.py,.js,.ts,.jsx,.tsx,.html,.css,.csv,.json,.png,.jpg,.jpeg,.docx"
->
+<input id="fileInput" type="file" hidden
+accept=".pdf,.txt,.md,.py,.js,.ts,.jsx,.tsx,.html,.css,.csv,.json,.png,.jpg,.jpeg,.docx">
 
 <textarea
 id="messageInput"
+class="message-input"
 rows="1"
 maxlength="20000"
 placeholder="Message Brain 3.0..."
 autocomplete="off"
-spellcheck="true"
-></textarea>
+spellcheck="true"></textarea>
 
-<button class="voice-button icon-button" id="voiceButton" type="button" title="Voice input" aria-label="Voice input">
+<button class="voice-button" id="voiceButton" type="button" title="Voice input">
 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-<rect x="9" y="2" width="6" height="12" rx="3"/>
-<path d="M5 10a7 7 0 0 0 14 0M12 19v3M8 22h8"/>
+<rect x="9" y="2" width="6" height="13" rx="3"/>
+<path d="M5 10a7 7 0 0 0 14 0M12 17v5M8 22h8"/>
 </svg>
 </button>
 
-<button class="send-button" id="sendButton" type="button" aria-label="Send message">
-<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3">
+<button class="send-button" id="sendButton" type="submit" title="Send">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 <path d="M22 2 11 13"/>
 <path d="m22 2-7 20-4-9-9-4Z"/>
 </svg>
 </button>
 
-</div>
-</div>
+</form>
 
 <div class="composer-footer">
 <span class="composer-hint">Enter to send · Shift + Enter for a new line</span>
@@ -199,8 +216,9 @@ spellcheck="true"
 </main>
 </div>
 
-<div class="auth-overlay" id="authModal">
-<div class="auth-modal">
+<div class="auth-modal" id="authModal">
+
+<div class="auth-card">
 
 <button class="auth-close" id="authCloseButton" type="button">×</button>
 
@@ -208,32 +226,67 @@ spellcheck="true"
 <img src="/static/logo.png" alt="Brain 3.0">
 </div>
 
-<h2 id="authTitle">Welcome back</h2>
-<p id="authSubtitle">Sign in to continue using Brain 3.0.</p>
+<h2 class="auth-title" id="authTitle">Welcome back</h2>
 
-<div class="auth-error" id="authError"></div>
+<p class="auth-subtitle" id="authSubtitle">
+Sign in to continue using Brain 3.0.
+</p>
 
 <form class="auth-form" id="loginForm">
-<input id="loginEmail" type="email" placeholder="Email" autocomplete="email" required>
-<input id="loginPassword" type="password" placeholder="Password" autocomplete="current-password" required>
+
+<div class="auth-field">
+<label for="loginEmail">Email</label>
+<input id="loginEmail" type="email" autocomplete="email" required>
+</div>
+
+<div class="auth-field">
+<label for="loginPassword">Password</label>
+<input id="loginPassword" type="password" autocomplete="current-password" required>
+</div>
+
 <button class="auth-submit" type="submit">Sign in</button>
 </form>
 
 <form class="auth-form" id="signupForm" style="display:none">
-<input id="signupName" type="text" placeholder="Name" autocomplete="name">
-<input id="signupEmail" type="email" placeholder="Email" autocomplete="email" required>
-<input id="signupPassword" type="password" placeholder="Password" autocomplete="new-password" minlength="6" required>
+
+<div class="auth-field">
+<label for="signupName">Name</label>
+<input id="signupName" type="text" autocomplete="name">
+</div>
+
+<div class="auth-field">
+<label for="signupEmail">Email</label>
+<input id="signupEmail" type="email" autocomplete="email" required>
+</div>
+
+<div class="auth-field">
+<label for="signupPassword">Password</label>
+<input id="signupPassword" type="password" autocomplete="new-password" minlength="6" required>
+</div>
+
 <button class="auth-submit" type="submit">Create account</button>
 </form>
 
-<button class="auth-switch" id="authSwitchButton" type="button">
-Create an account
-</button>
+<div class="auth-error" id="authError"></div>
+
+<div class="auth-switch">
+<span id="authSwitchText">Don't have an account?</span>
+<button id="authSwitchButton" type="button">Create an account</button>
+</div>
 
 </div>
 </div>
 
-<script src="/static/auth.js"></script>
-<script src="/static/app.js"></script>
+<script src="/static/auth.js?v=11"></script>
+<script src="/static/app.js?v=11"></script>
+
+<script>
+if("serviceWorker" in navigator){
+window.addEventListener("load",()=>{
+navigator.serviceWorker.register("/sw.js").catch(console.error);
+});
+}
+</script>
+
 </body>
 </html>
