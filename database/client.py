@@ -9,7 +9,6 @@ from core.config import settings
 
 @lru_cache(maxsize=1)
 def get_supabase()->Client:
-    settings.validate()
     return create_client(
         settings.supabase_url,
         settings.supabase_secret_key,
