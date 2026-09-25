@@ -120,6 +120,7 @@ def create_app():
             "database_test":database,
             "auth":"enabled",
             "brain":"orchestrator"
+"rest_test":test_rest_connection(),
         })
 
     @app.get("/api/chats/<chat_id>")
