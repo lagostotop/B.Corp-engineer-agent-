@@ -1,15 +1,60 @@
 "use strict";
 class BrainAuth{
 constructor(){this.user=null;this.session=null;this.supabase=null;this.listeners=new Set()}
-async init(){try{const r=await fetch("/api/auth/config",{cache:"no-store"});if(!r.ok)throw Error(`Authentication configuration failed (${r.status})`);const c=await r.json(),url=c.supabase_url,key=c.supabase_publishable_key||c.supabase_anon_key;if(!url||!key||!window.supabase)throw Error("Authentication is not configured.");this.supabase=window.supabase.createClient(url,key,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});const{data,error}=await this.supabase.auth.getSession();if(error)throw error;this.session=data.session||null;this.user=this.session?.user||null;this.supabase.auth.onAuthStateChange((e,s)=>{this.session=s||null;this.user=s?.user||null;this.updateUI(this.user);for(const fn of this.listeners)Promise.resolve(fn(this.user,e)).catch(console.error)});this.updateUI(this.user);return this.user}catch(e){console.error("Auth initialization failed:",e);this.supabase=null;this.session=null;this.user=null;this.updateUI(null);return null}}
+async init(){
+try{
+const r=await fetch("/api/auth/config",{cache:"no-store"});
+if(!r.ok)throw Error(`Authentication configuration failed (${r.status})`);
+const c=await r.json(),url=c.supabase_url,key=c.supabase_publishable_key||c.supabase_anon_key;
+if(!url||!key||!window.supabase)throw Error("Authentication is not configured.");
+this.supabase=window.supabase.createClient(url,key,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+const{data,error}=await this.supabase.auth.getSession();
+if(error)throw error;
+this.session=data.session||null;this.user=this.session?.user||null;
+this.supabase.auth.onAuthStateChange((e,s)=>{
+this.session=s||null;this.user=s?.user||null;this.updateUI(this.user);
+for(const fn of this.listeners)Promise.resolve(fn(this.user,e)).catch(console.error)
+});
+this.updateUI(this.user);return this.user
+}catch(e){console.error("Auth initialization failed:",e);this.supabase=null;this.session=null;this.user=null;this.updateUI(null);return null}
+}
 onAuthStateChange(fn){if(typeof fn!=="function")return()=>{};this.listeners.add(fn);return()=>this.listeners.delete(fn)}
 getUser(){return this.user}
 isAuthenticated(){return!!(this.user&&this.session?.access_token)}
 getAuthHeader(){return this.session?.access_token?`Bearer ${this.session.access_token}`:null}
-async signIn(email,password){if(!this.supabase)throw Error("Authentication is not configured.");const{data,error}=await this.supabase.auth.signInWithPassword({email:String(email).trim(),password});if(error)throw error;this.session=data.session;this.user=data.user;this.updateUI(this.user);return data}
-async signUp(email,password){if(!this.supabase)throw Error("Authentication is not configured.");const{data,error}=await this.supabase.auth.signUp({email:String(email).trim(),password});if(error)throw error;this.session=data.session||null;this.user=data.user||null;this.updateUI(this.user);return data}
-async signOut(){if(this.supabase){const{error}=await this.supabase.auth.signOut();if(error)throw error}this.session=null;this.user=null;this.updateUI(null)}
-async fetchWithAuth(url,options={}){const run=async()=>{const h=new Headers(options.headers||{}),t=this.getAuthHeader();if(t)h.set("Authorization",t);return fetch(url,{...options,credentials:"include",headers:h})};let r=await run();if(r.status!==401||!this.supabase)return r;try{const{data,error}=await this.supabase.auth.refreshSession();if(error||!data.session){await this.signOut().catch(()=>{});return r}this.session=data.session;this.user=data.user||this.session.user;return run()}catch(e){console.error(e);return r}}
-updateUI(u){const a=$("userAvatar"),n=$("userName"),em=$("userEmail"),b=$("authBtn");if(!u){if(a)a.textContent="?";if(n)n.textContent="Guest";if(em)em.textContent="Not signed in";if(b)b.textContent="Login";return}const m=u.user_metadata||{},name=m.full_name||m.name||u.email?.split("@")[0]||"User";if(a)a.textContent=name[0].toUpperCase();if(n)n.textContent=name;if(em)em.textContent=u.email||"";if(b)b.textContent="Logout"}
+async signIn(email,password){
+if(!this.supabase)throw Error("Authentication is not configured.");
+const{data,error}=await this.supabase.auth.signInWithPassword({email:String(email).trim(),password});
+if(error)throw error;this.session=data.session;this.user=data.user;this.updateUI(this.user);return data
+}
+async signUp(email,password){
+if(!this.supabase)throw Error("Authentication is not configured.");
+const{data,error}=await this.supabase.auth.signUp({email:String(email).trim(),password});
+if(error)throw error;this.session=data.session||null;this.user=data.user||null;this.updateUI(this.user);return data
+}
+async signOut(){
+if(this.supabase){const{error}=await this.supabase.auth.signOut();if(error)throw error}
+this.session=null;this.user=null;this.updateUI(null)
+}
+async fetchWithAuth(url,options={}){
+const run=async()=>{
+const h=new Headers(options.headers||{}),t=this.getAuthHeader();
+if(t)h.set("Authorization",t);
+return fetch(url,{...options,credentials:"include",headers:h})
+};
+let r=await run();
+if(r.status!==401||!this.supabase)return r;
+try{
+const{data,error}=await this.supabase.auth.refreshSession();
+if(error||!data.session){await this.signOut().catch(()=>{});return r}
+this.session=data.session;this.user=data.user||this.session.user;return run()
+}catch(e){console.error(e);return r}
+}
+updateUI(u){
+const a=document.getElementById("userAvatar"),n=document.getElementById("userName"),em=document.getElementById("userEmail"),b=document.getElementById("authBtn");
+if(!u){if(a)a.textContent="?";if(n)n.textContent="Guest";if(em)em.textContent="Not signed in";if(b)b.textContent="Login";return}
+const m=u.user_metadata||{},name=m.full_name||m.name||u.email?.split("@")[0]||"User";
+if(a)a.textContent=name[0].toUpperCase();if(n)n.textContent=name;if(em)em.textContent=u.email||"";if(b)b.textContent="Logout"
+}
 }
 window.BrainAuth=new BrainAuth;
