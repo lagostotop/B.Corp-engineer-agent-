@@ -1,160 +1,32 @@
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#08060d">
-<meta name="color-scheme" content="dark">
-<meta name="description" content="Brain 3.0 — B.CORP intelligent AI assistant.">
-<title>Brain 3.0</title>
-<link rel="icon" href="/static/logo.png">
-<link rel="stylesheet" href="/static/style.css">
-<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
-</head>
-<body>
-<div id="app" class="app">
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#0b1220"><meta name="color-scheme" content="dark"><title>B.CORP — Brain 3.0</title><link rel="icon" href="/static/logo.png"><link rel="stylesheet" href="/static/style.css?v=12"><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script><script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script></head><body><div id="app" class="app">
 
 <aside id="sidebar" class="sidebar">
-  <div class="side-head">
-    <button id="closeSidebar" class="icon-btn mobile-only" aria-label="Close sidebar">×</button>
-    <div class="brand">
-      <img src="/static/logo.png" class="logo" alt="Brain">
-    </div>
-    <button id="newChat" class="new-chat" type="button">
-      <span class="new-icon">+</span><span>New chat</span>
-    </button>
-    <label class="search-box">
-      <span>⌕</span>
-      <input id="chatSearch" type="search" placeholder="Search chats">
-    </label>
-  </div>
-
-  <div class="history">
-    <div class="history-title">Chats</div>
-    <div id="chatList" class="chat-list"></div>
-    <div id="emptyHistory" class="empty-history">No conversations yet</div>
-  </div>
-
-  <div class="side-bottom">
-    <button id="settingsBtn" class="side-action" type="button">
-      <span>⚙</span><span>Settings</span>
-    </button>
-    <div id="userCard" class="user-card">
-      <div id="userAvatar" class="avatar">B</div>
-      <div class="user-details">
-        <strong id="userName">Brain User</strong>
-        <small id="userEmail">Not signed in</small>
-      </div>
-      <button id="authBtn" class="mini-btn" type="button">Login</button>
-    </div>
-  </div>
+<div class="side-head"><button id="closeSidebar" class="icon-btn mobile-only">×</button><div class="brand"><img src="/static/logo.png" class="logo" alt="B.CORP"></div><button id="newChat" class="new-chat"><span>＋</span> New chat</button><label class="search-box"><span>⌕</span><input id="chatSearch" type="search" placeholder="Search chats"></label></div>
+<div class="history"><div class="history-title">Chats</div><div id="chatList" class="chat-list"></div><div id="emptyHistory" class="empty-history">No conversations yet</div></div>
+<div class="side-bottom"><button id="settingsBtn" class="side-action">⚙ <span>Settings</span></button><div class="user-card"><div id="userAvatar" class="avatar">?</div><div class="user-details"><strong id="userName">Guest</strong><small id="userEmail">Not signed in</small></div><button id="authBtn" class="mini-btn">Login</button></div></div>
 </aside>
 
 <div id="sidebarBackdrop" class="sidebar-backdrop"></div>
 
 <main class="main">
-  <header class="topbar">
-    <div class="top-left">
-      <button id="openSidebar" class="icon-btn mobile-only" aria-label="Open sidebar">☰</button>
-      <button id="modelButton" class="model-button" type="button">
-        <span class="model-logo"><img src="/static/logo.png" alt=""></span>
-        <span>Brain 3.0</span><span class="chevron">⌄</span>
-      </button>
-    </div>
-    <div class="top-right">
-      <span id="connection" class="connection"><i></i> Online</span>
-      <button id="moreButton" class="icon-btn" type="button" aria-label="More">⋯</button>
-    </div>
-  </header>
+<header class="topbar"><div class="top-left"><button id="openSidebar" class="icon-btn mobile-only">☰</button><button id="modelButton" class="model-button"><span class="model-logo"><img src="/static/logo.png" alt=""></span><span>Brain 3.0</span><span class="chevron">⌄</span></button></div><div class="top-right"><span id="connection" class="connection"><i></i> Online</span><button id="moreButton" class="icon-btn">⋯</button></div></header>
 
-  <section id="chatContainer" class="chat-container">
-    <div id="messages" class="messages">
-      <div id="welcome" class="welcome">
-        <div class="welcome-logo"><img src="/static/logo.png" alt="Brain"></div>
-        <h1>What are you working on?</h1>
-        <p>Ask Brain 3.0 to explain, create, analyze, code, research, or solve a problem.</p>
-        <div class="suggestions">
-          <button class="suggestion" data-prompt="Explain a difficult concept to me simply."><b>🧠 Learn something</b><small>Explain a difficult concept</small></button>
-          <button class="suggestion" data-prompt="Help me solve a technical problem step by step."><b>🔬 Solve a problem</b><small>Work through a challenge</small></button>
-          <button class="suggestion" data-prompt="Help me write clean production-quality code."><b>💻 Write code</b><small>Build or debug software</small></button>
-          <button class="suggestion" data-prompt="Help me brainstorm a new idea."><b>💡 Brainstorm</b><small>Develop an idea</small></button>
-        </div>
-      </div>
-    </div>
-  </section>
+<section id="chatContainer" class="chat-container"><div id="messages" class="messages"><div id="welcome" class="welcome"><h1>What can I help with?</h1><p>Ask Brain 3.0 to explain, create, analyze, code, research, or solve a problem.</p><div class="suggestions"><button class="suggestion" data-prompt="Explain a difficult concept to me simply."><b>Learn something</b><small>Understand a difficult topic</small></button><button class="suggestion" data-prompt="Help me solve a technical problem step by step."><b>Solve a problem</b><small>Work through a challenge</small></button><button class="suggestion" data-prompt="Help me write clean production-quality code."><b>Write code</b><small>Build or debug software</small></button><button class="suggestion" data-prompt="Help me brainstorm a new idea."><b>Brainstorm</b><small>Develop an idea</small></button></div></div></div></section>
 
-  <section class="composer-area">
-    <div id="filePreview" class="file-preview"></div>
-    <div class="composer-wrap">
-      <div id="composer" class="composer">
-        <button id="addButton" class="composer-btn" type="button" aria-label="Add">+</button>
-        <textarea id="messageInput" rows="1" placeholder="Ask Brain 3.0 anything..."></textarea>
-        <button id="voiceButton" class="composer-btn" type="button" aria-label="Voice">◉</button>
-        <button id="sendButton" class="send-btn" type="button" aria-label="Send">↑</button>
-      </div>
-      <div class="composer-footer">
-        <span>Brain 3.0 can make mistakes. Verify important information.</span>
-        <span id="shortcutHint">Enter to send · Shift+Enter for new line</span>
-      </div>
-    </div>
-
-    <input id="fileInput" type="file" hidden multiple>
-  </section>
+<section class="composer-area"><div id="filePreview" class="file-preview"></div><div class="composer-wrap"><div id="composer" class="composer"><button id="addButton" class="composer-btn">＋</button><textarea id="messageInput" rows="1" placeholder="Message Brain 3.0..." autocomplete="off"></textarea><button id="voiceButton" class="composer-btn">◉</button><button id="sendButton" class="send-btn">↑</button></div><div class="composer-footer"><span>Brain 3.0 can make mistakes. Check important information.</span><span>Enter to send · Shift+Enter for new line</span></div></div><input id="fileInput" type="file" hidden></section>
 </main>
 
-<div id="toolsMenu" class="popup tools-menu">
-  <button data-tool="file">📎 <span>Upload file</span></button>
-  <button data-tool="image">🖼 <span>Upload image</span></button>
-  <button data-tool="web">⌕ <span>Web search</span><small>Coming soon</small></button>
-  <button data-tool="code">⌘ <span>Code</span></button>
-  <button data-tool="data">▦ <span>Data analysis</span><small>Coming soon</small></button>
-</div>
-
-<div id="modelMenu" class="popup model-menu">
-  <button class="active">◉ <span>Brain 3.0</span><small>Default</small></button>
-  <button>⚡ <span>Fast</span><small>Coming soon</small></button>
-  <button>🧠 <span>Reasoning</span><small>Coming soon</small></button>
-  <button>⌘ <span>Code</span><small>Coming soon</small></button>
-</div>
-
-<div id="moreMenu" class="popup more-menu">
-  <button id="clearChat">＋ <span>New chat</span></button>
-  <button id="shareChat">↗ <span>Share</span></button>
-</div>
-
+<div id="toolsMenu" class="popup tools-menu"><button data-tool="file">📎 <span>Upload file</span></button><button data-tool="image">▧ <span>Upload image</span></button><button data-tool="code">⌘ <span>Code</span></button></div>
+<div id="modelMenu" class="popup model-menu"><button class="active">◉ <span>Brain 3.0</span><small>Default</small></button><button>⚡ <span>Fast</span><small>Coming soon</small></button><button>🧠 <span>Reasoning</span><small>Coming soon</small></button><button>⌘ <span>Code</span><small>Coming soon</small></button></div>
+<div id="moreMenu" class="popup more-menu"><button id="clearChat">＋ <span>New chat</span></button><button id="shareChat">↗ <span>Share</span></button></div>
 <div id="contextMenu" class="popup context-menu"></div>
 
-<div id="renameModal" class="modal">
-  <div class="modal-card">
-    <button class="modal-close" data-close="renameModal">×</button>
-    <h2>Rename conversation</h2>
-    <p>Give this conversation a name.</p>
-    <input id="renameInput" type="text" maxlength="120" placeholder="Conversation name">
-    <div class="modal-actions">
-      <button class="secondary" data-close="renameModal">Cancel</button>
-      <button id="saveRename" class="primary">Save</button>
-    </div>
-  </div>
-</div>
+<div id="authModal" class="modal"><div class="modal-card"><button class="modal-close" data-close="authModal">×</button><div class="auth-brand"><img src="/static/logo.png" alt="B.CORP"></div><h2 id="authTitle">Welcome back</h2><p id="authSubtitle">Sign in to continue to Brain 3.0.</p><input id="authEmail" type="email" placeholder="Email"><input id="authPassword" type="password" placeholder="Password"><div id="authError" class="auth-error"></div><button id="loginSubmit" class="primary">Log in</button><button id="signupSubmit" class="secondary">Create account</button></div></div>
 
-<div id="settingsModal" class="modal">
-  <div class="modal-card settings-card">
-    <button class="modal-close" data-close="settingsModal">×</button>
-    <h2>Settings</h2>
-    <p>Brain 3.0 preferences</p>
-    <div class="settings-list">
-      <div><span>Appearance</span><b>Dark Purple</b></div>
-      <div><span>Theme</span><b>Black + Purple</b></div>
-      <div><span>Enter to send</span><label class="switch"><input id="enterToggle" type="checkbox" checked><i></i></label></div>
-      <div><span>Show message actions</span><label class="switch"><input id="actionsToggle" type="checkbox" checked><i></i></label></div>
-    </div>
-  </div>
-</div>
+<div id="renameModal" class="modal"><div class="modal-card"><button class="modal-close" data-close="renameModal">×</button><h2>Rename conversation</h2><p>Choose a name for this conversation.</p><input id="renameInput" maxlength="120" placeholder="Conversation name"><div class="modal-actions"><button class="secondary" data-close="renameModal">Cancel</button><button id="saveRename" class="primary">Save</button></div></div></div>
+
+<div id="settingsModal" class="modal"><div class="modal-card"><button class="modal-close" data-close="settingsModal">×</button><h2>Settings</h2><p>Brain 3.0 preferences</p><div class="settings-list"><div><span>Theme</span><b>Dark Navy</b></div><div><span>Enter to send</span><label class="switch"><input id="enterToggle" type="checkbox" checked><i></i></label></div><div><span>Message actions</span><label class="switch"><input id="actionsToggle" type="checkbox" checked><i></i></label></div></div></div></div>
 
 <div id="toast" class="toast"></div>
-
-<script src="/static/auth.js"></script>
-<script src="/static/app.js"></script>
-</body>
-</html>
+<script src="/static/auth.js?v=12"></script><script src="/static/app.js?v=12"></script>
+</body></html>
