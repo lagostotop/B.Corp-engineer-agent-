@@ -1,7 +1,160 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#07111f"><meta name="color-scheme" content="dark"><meta name="description" content="Brain 3.0 — B.CORP intelligent AI assistant."><meta name="application-name" content="Brain 3.0"><link rel="manifest" href="/static/manifest.json"><link rel="icon" href="/static/favicon.ico"><link rel="stylesheet" href="/static/style.css?v=20"><title>Brain 3.0 — B.CORP</title><script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script><script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script></head><body><div class="app">
-<aside class="sidebar" id="sidebar"><div class="side-head"><div class="brand"><img src="/static/logo.png" class="brand-logo" alt="Brain 3.0"><div><b>Brain 3.0</b><small>B.CORP INTELLIGENCE</small></div></div><button class="new-chat" id="newChatButton"><i>＋</i><span>New chat</span></button><button class="search-chat" id="chatSearchButton"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>Search chats</button></div><div class="history"><label>Recent</label><div id="chatList"></div></div><div class="side-foot"><div class="user-card"><div class="avatar" id="userAvatar">?</div><div><b id="userName">Guest</b><small id="userEmail">Not signed in</small></div></div><button class="auth-btn" id="authButton">Login</button></div></aside><div class="backdrop" id="sidebarBackdrop"></div>
-<main class="main"><header class="topbar"><div class="top-left"><button class="icon-btn mobile-menu" id="mobileMenuButton" aria-label="Menu"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button><button class="model" type="button"><span class="model-logo"><img src="/static/logo.png" alt=""></span><span><b>Brain 3.0</b><small>B.CORP AI</small></span><em>⌄</em></button></div><div class="top-right"><span class="status"><i id="statusDot"></i><span id="connectionStatus">Ready</span></span><button class="icon-btn" id="newChatTopButton" title="New chat"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button></div></header>
-<section class="chat" id="chatContainer"><div class="messages" id="messages"><div class="welcome" id="welcomeMessage"><div class="hero-logo"><img src="/static/logo.png" alt=""></div><h1>What can I help you <span>build?</span></h1><p>Research, reason, code, analyze documents and turn ideas into working systems with Brain 3.0.</p><div class="prompts"><button data-prompt="Explain this concept to me step by step."><strong>Learn</strong><small>Understand a difficult concept</small></button><button data-prompt="Help me design and build a software project."><strong>Build</strong><small>Create a system or product</small></button><button data-prompt="Analyze this problem and give me practical solutions."><strong>Analyze</strong><small>Break down a complex problem</small></button><button data-prompt="Research this topic and identify the important facts."><strong>Research</strong><small>Explore a subject deeply</small></button></div></div></div></section>
-<div class="composer-area"><div class="composer-wrap"><div class="file-preview" id="filePreview"><span>📎</span><b id="fileName"></b><small id="fileMeta"></small><button id="removeFileButton">×</button></div><form class="composer" id="composerForm"><button class="attach" id="attachButton" type="button" title="Attach"><svg viewBox="0 0 24 24"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg></button><input id="fileInput" type="file" hidden accept=".pdf,.txt,.md,.py,.js,.ts,.jsx,.tsx,.html,.css,.csv,.json,.png,.jpg,.jpeg,.docx"><textarea id="messageInput" rows="1" maxlength="20000" placeholder="Message Brain 3.0..." autocomplete="off"></textarea><button class="voice" id="voiceButton" type="button" title="Voice input"><svg viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="13" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v5M8 22h8"/></svg></button><button class="send" id="sendButton" type="submit" title="Send"><svg viewBox="0 0 24 24"><path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4Z"/></svg></button></form><div class="composer-foot"><span>Enter to send · Shift + Enter for new line</span><small>Brain 3.0 can make mistakes. Verify important information.</small></div></div></div></main></div>
-<div class="auth-modal" id="authModal"><div class="auth-card"><button class="auth-close" id="authCloseButton">×</button><div class="auth-logo"><img src="/static/logo.png" alt=""></div><h2 id="authTitle">Welcome back</h2><p id="authSubtitle">Sign in to continue using Brain 3.0.</p><form id="loginForm" class="auth-form"><label>Email<input id="loginEmail" type="email" autocomplete="email" required></label><label>Password<input id="loginPassword" type="password" autocomplete="current-password" required></label><button class="primary" type="submit">Sign in</button></form><form id="signupForm" class="auth-form" style="display:none"><label>Name<input id="signupName" type="text" autocomplete="name"></label><label>Email<input id="signupEmail" type="email" autocomplete="email" required></label><label>Password<input id="signupPassword" type="password" autocomplete="new-password" minlength="6" required></label><button class="primary" type="submit">Create account</button></form><div class="auth-error" id="authError"></div><div class="switch"><span id="authSwitchText">Don't have an account?</span><button id="authSwitchButton" type="button">Create an account</button></div></div></div>
-<script src="/static/auth.js?v=20"></script><script src="/static/app.js?v=20"></script><script>if("serviceWorker"in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("/sw.js?v=20").catch(console.error));</script></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#08060d">
+<meta name="color-scheme" content="dark">
+<meta name="description" content="Brain 3.0 — B.CORP intelligent AI assistant.">
+<title>Brain 3.0</title>
+<link rel="icon" href="/static/logo.png">
+<link rel="stylesheet" href="/static/style.css">
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
+</head>
+<body>
+<div id="app" class="app">
+
+<aside id="sidebar" class="sidebar">
+  <div class="side-head">
+    <button id="closeSidebar" class="icon-btn mobile-only" aria-label="Close sidebar">×</button>
+    <div class="brand">
+      <img src="/static/logo.png" class="logo" alt="Brain">
+    </div>
+    <button id="newChat" class="new-chat" type="button">
+      <span class="new-icon">+</span><span>New chat</span>
+    </button>
+    <label class="search-box">
+      <span>⌕</span>
+      <input id="chatSearch" type="search" placeholder="Search chats">
+    </label>
+  </div>
+
+  <div class="history">
+    <div class="history-title">Chats</div>
+    <div id="chatList" class="chat-list"></div>
+    <div id="emptyHistory" class="empty-history">No conversations yet</div>
+  </div>
+
+  <div class="side-bottom">
+    <button id="settingsBtn" class="side-action" type="button">
+      <span>⚙</span><span>Settings</span>
+    </button>
+    <div id="userCard" class="user-card">
+      <div id="userAvatar" class="avatar">B</div>
+      <div class="user-details">
+        <strong id="userName">Brain User</strong>
+        <small id="userEmail">Not signed in</small>
+      </div>
+      <button id="authBtn" class="mini-btn" type="button">Login</button>
+    </div>
+  </div>
+</aside>
+
+<div id="sidebarBackdrop" class="sidebar-backdrop"></div>
+
+<main class="main">
+  <header class="topbar">
+    <div class="top-left">
+      <button id="openSidebar" class="icon-btn mobile-only" aria-label="Open sidebar">☰</button>
+      <button id="modelButton" class="model-button" type="button">
+        <span class="model-logo"><img src="/static/logo.png" alt=""></span>
+        <span>Brain 3.0</span><span class="chevron">⌄</span>
+      </button>
+    </div>
+    <div class="top-right">
+      <span id="connection" class="connection"><i></i> Online</span>
+      <button id="moreButton" class="icon-btn" type="button" aria-label="More">⋯</button>
+    </div>
+  </header>
+
+  <section id="chatContainer" class="chat-container">
+    <div id="messages" class="messages">
+      <div id="welcome" class="welcome">
+        <div class="welcome-logo"><img src="/static/logo.png" alt="Brain"></div>
+        <h1>What are you working on?</h1>
+        <p>Ask Brain 3.0 to explain, create, analyze, code, research, or solve a problem.</p>
+        <div class="suggestions">
+          <button class="suggestion" data-prompt="Explain a difficult concept to me simply."><b>🧠 Learn something</b><small>Explain a difficult concept</small></button>
+          <button class="suggestion" data-prompt="Help me solve a technical problem step by step."><b>🔬 Solve a problem</b><small>Work through a challenge</small></button>
+          <button class="suggestion" data-prompt="Help me write clean production-quality code."><b>💻 Write code</b><small>Build or debug software</small></button>
+          <button class="suggestion" data-prompt="Help me brainstorm a new idea."><b>💡 Brainstorm</b><small>Develop an idea</small></button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="composer-area">
+    <div id="filePreview" class="file-preview"></div>
+    <div class="composer-wrap">
+      <div id="composer" class="composer">
+        <button id="addButton" class="composer-btn" type="button" aria-label="Add">+</button>
+        <textarea id="messageInput" rows="1" placeholder="Ask Brain 3.0 anything..."></textarea>
+        <button id="voiceButton" class="composer-btn" type="button" aria-label="Voice">◉</button>
+        <button id="sendButton" class="send-btn" type="button" aria-label="Send">↑</button>
+      </div>
+      <div class="composer-footer">
+        <span>Brain 3.0 can make mistakes. Verify important information.</span>
+        <span id="shortcutHint">Enter to send · Shift+Enter for new line</span>
+      </div>
+    </div>
+
+    <input id="fileInput" type="file" hidden multiple>
+  </section>
+</main>
+
+<div id="toolsMenu" class="popup tools-menu">
+  <button data-tool="file">📎 <span>Upload file</span></button>
+  <button data-tool="image">🖼 <span>Upload image</span></button>
+  <button data-tool="web">⌕ <span>Web search</span><small>Coming soon</small></button>
+  <button data-tool="code">⌘ <span>Code</span></button>
+  <button data-tool="data">▦ <span>Data analysis</span><small>Coming soon</small></button>
+</div>
+
+<div id="modelMenu" class="popup model-menu">
+  <button class="active">◉ <span>Brain 3.0</span><small>Default</small></button>
+  <button>⚡ <span>Fast</span><small>Coming soon</small></button>
+  <button>🧠 <span>Reasoning</span><small>Coming soon</small></button>
+  <button>⌘ <span>Code</span><small>Coming soon</small></button>
+</div>
+
+<div id="moreMenu" class="popup more-menu">
+  <button id="clearChat">＋ <span>New chat</span></button>
+  <button id="shareChat">↗ <span>Share</span></button>
+</div>
+
+<div id="contextMenu" class="popup context-menu"></div>
+
+<div id="renameModal" class="modal">
+  <div class="modal-card">
+    <button class="modal-close" data-close="renameModal">×</button>
+    <h2>Rename conversation</h2>
+    <p>Give this conversation a name.</p>
+    <input id="renameInput" type="text" maxlength="120" placeholder="Conversation name">
+    <div class="modal-actions">
+      <button class="secondary" data-close="renameModal">Cancel</button>
+      <button id="saveRename" class="primary">Save</button>
+    </div>
+  </div>
+</div>
+
+<div id="settingsModal" class="modal">
+  <div class="modal-card settings-card">
+    <button class="modal-close" data-close="settingsModal">×</button>
+    <h2>Settings</h2>
+    <p>Brain 3.0 preferences</p>
+    <div class="settings-list">
+      <div><span>Appearance</span><b>Dark Purple</b></div>
+      <div><span>Theme</span><b>Black + Purple</b></div>
+      <div><span>Enter to send</span><label class="switch"><input id="enterToggle" type="checkbox" checked><i></i></label></div>
+      <div><span>Show message actions</span><label class="switch"><input id="actionsToggle" type="checkbox" checked><i></i></label></div>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script src="/static/auth.js"></script>
+<script src="/static/app.js"></script>
+</body>
+</html>
