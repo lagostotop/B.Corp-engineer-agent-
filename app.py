@@ -10,7 +10,7 @@ from core.errors import register_error_handlers
 from core.logging import configure_logging,start_request_context
 from core.security import authenticate_request,current_user_id
 from database.client import db,test_database_connection,test_rest_connection
-from database.chats import create_chat,delete_chat,get_chat,list_chats
+from database.chats import create_chat,delete_chat,get_chat,list_chats,update_chat
 from database.messages import create_message,list_messages
 from brain.context import build_context
 from brain.orchestrator import BrainOrchestrator
@@ -73,8 +73,14 @@ def create_app():
 
     @app.get("/api/auth/config")
     def auth_config():
-        publishable_key=getattr(settings,"supabase_publishable_key",None) or getattr(settings,"supabase_anon_key","") or ""
-        return jsonify({"supabase_url":settings.supabase_url,"supabase_publishable_key":publishable_key,"supabase_anon_key":publishable_key,"auth_enabled":bool(settings.supabase_url and publishable_key),"version":VERSION})
+        key=getattr(settings,"supabase_publishable_key",None) or getattr(settings,"supabase_anon_key","") or ""
+        return jsonify({
+            "supabase_url":settings.supabase_url,
+            "supabase_publishable_key":key,
+            "supabase_anon_key":key,
+            "auth_enabled":bool(settings.supabase_url and key),
+            "version":VERSION
+        })
 
     @app.get("/api/auth/me")
     @auth_required
@@ -82,7 +88,11 @@ def create_app():
         user=getattr(g,"user",None)
         if user is None:
             return jsonify({"error":"Authentication required.","code":"AUTHENTICATION_REQUIRED"}),401
-        return jsonify({"user":{"id":str(user.id),"email":getattr(user,"email",None),"user_metadata":getattr(user,"user_metadata",{}) or {}}})
+        return jsonify({"user":{
+            "id":str(user.id),
+            "email":getattr(user,"email",None),
+            "user_metadata":getattr(user,"user_metadata",{}) or {}
+        }})
 
     @app.get("/api/chats")
     @auth_required
@@ -98,20 +108,35 @@ def create_app():
         title=str(data.get("title","New Chat")).strip()[:200] or "New Chat"
         return jsonify({"chat":create_chat(uid,title)}),201
 
-    @app.get("/health")
-    def health():
-        database=test_database_connection()
-        return jsonify({
-            "status":"ok" if database["ok"] else "degraded",
-            "service":settings.app_name,
-            "version":VERSION,
-            "environment":settings.environment,
-            "database":"connected" if database["ok"] else "disconnected",
-            "database_test":database,
-            "auth":"enabled",
-            "brain":"orchestrator",
-            "rest_test":test_rest_connection()
-        })
+    @app.patch("/api/chats/<chat_id>")
+    @auth_required
+    def update_chat_route(chat_id):
+        uid=current_user_id()
+        if not get_chat(chat_id,uid):
+            return jsonify({"error":"Chat not found.","code":"NOT_FOUND"}),404
+        data=request.get_json(silent=True) or {}
+        title=str(data.get("title","")).strip()[:200]
+        if not title:
+            return jsonify({"error":"Title required.","code":"VALIDATION_ERROR"}),400
+        chat=update_chat(chat_id,uid,title)
+        if not chat:
+            return jsonify({"error":"Unable to rename chat.","code":"UPDATE_FAILED"}),500
+        return jsonify({"chat":chat})
+
+    @app.patch("/api/chat/<chat_id>/rename")
+    @auth_required
+    def rename_chat_route(chat_id):
+        uid=current_user_id()
+        if not get_chat(chat_id,uid):
+            return jsonify({"error":"Chat not found.","code":"NOT_FOUND"}),404
+        data=request.get_json(silent=True) or {}
+        title=str(data.get("title","")).strip()[:200]
+        if not title:
+            return jsonify({"error":"Title required.","code":"VALIDATION_ERROR"}),400
+        chat=update_chat(chat_id,uid,title)
+        if not chat:
+            return jsonify({"error":"Unable to rename chat.","code":"UPDATE_FAILED"}),500
+        return jsonify({"chat":chat})
 
     @app.get("/api/chats/<chat_id>")
     @auth_required
@@ -152,6 +177,21 @@ def create_app():
             return jsonify({"error":"Chat not found.","code":"NOT_FOUND"}),404
         deleted=delete_chat(chat_id,uid)
         return jsonify({"success":deleted,"deleted":deleted})
+
+    @app.get("/health")
+    def health():
+        database=test_database_connection()
+        return jsonify({
+            "status":"ok" if database["ok"] else "degraded",
+            "service":settings.app_name,
+            "version":VERSION,
+            "environment":settings.environment,
+            "database":"connected" if database["ok"] else "disconnected",
+            "database_test":database,
+            "auth":"enabled",
+            "brain":"orchestrator",
+            "rest_test":test_rest_connection()
+        })
 
     @app.post("/api/chat")
     @auth_required
@@ -219,17 +259,13 @@ def create_app():
                         result=FileIngestionService().ingest(path=filepath,filename=original_name,user_id=uid,chat_id=chat_id)
                         if not result.get("success"):
                             logger.warning("File ingestion failed: %s",result.get("error","unknown error"))
-                        else:
-                            logger.info("File indexed: %s chunks=%s",original_name,result.get("saved",0))
                     except Exception:
                         logger.exception("File ingestion failed for %s",original_name)
 
             except Exception:
                 if filepath and os.path.exists(filepath):
-                    try:
-                        os.remove(filepath)
-                    except OSError:
-                        pass
+                    try: os.remove(filepath)
+                    except OSError: pass
                 logger.exception("File upload failed")
                 return jsonify({"error":"File upload failed.","code":"FILE_UPLOAD_FAILED"}),500
 
@@ -238,10 +274,8 @@ def create_app():
                 create_message(uid,chat_id,"user",question,db_file_meta,client_msg_id)
             except Exception:
                 if filepath and os.path.exists(filepath):
-                    try:
-                        os.remove(filepath)
-                    except OSError:
-                        pass
+                    try: os.remove(filepath)
+                    except OSError: pass
                 logger.exception("Failed to save user message")
                 return jsonify({"error":"Failed to save message.","code":"MESSAGE_SAVE_FAILED"}),500
 
@@ -268,24 +302,27 @@ def create_app():
                 if full.strip():
                     create_message(uid,chat_id,"assistant",full)
                     try:
-                        db().table("chats").update({"updated_at":datetime.now(timezone.utc).isoformat()}).eq("id",chat_id).eq("user_id",uid).execute()
+                        db().table("chats").update({
+                            "updated_at":datetime.now(timezone.utc).isoformat()
+                        }).eq("id",chat_id).eq("user_id",uid).execute()
                     except Exception:
                         logger.exception("Failed to update chat timestamp")
 
             except Exception:
                 logger.exception("Brain generation failed")
                 yield f"event: error\ndata: {json.dumps({'message':'Brain generation failed.','request_id':getattr(g,'request_id','')})}\n\n"
-
             finally:
                 if filepath and os.path.exists(filepath):
-                    try:
-                        os.remove(filepath)
-                    except OSError:
-                        pass
+                    try: os.remove(filepath)
+                    except OSError: pass
                 yield f"event: done\ndata: {json.dumps({'chat_id':chat_id})}\n\n"
 
         response=Response(stream_with_context(generate()),mimetype="text/event-stream")
-        response.headers.update({"Cache-Control":"no-cache","X-Accel-Buffering":"no","Connection":"keep-alive"})
+        response.headers.update({
+            "Cache-Control":"no-cache",
+            "X-Accel-Buffering":"no",
+            "Connection":"keep-alive"
+        })
         return response
 
     @app.errorhandler(RequestEntityTooLarge)
