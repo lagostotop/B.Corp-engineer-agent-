@@ -1,36 +1,28 @@
-# requirements.txt - Add these for Render
 Flask==3.0.3
 Werkzeug==3.0.3
-gunicorn==22.0.0
+gunicorn==22.0.0
 flask-limiter==3.8.0
 flask-cors==4.0.1
 
-# AI
 groq==1.7.0
-openai>=1.50.0
+openai>=1.50.0,<3
 tavily-python==0.5.1
 
-# Database
 supabase==2.31.0
 psycopg2-binary==2.9.9
 
-# Cache (Use Redis on Render)
 redis==5.0.0
 
-# Auth & Security
 PyJWT[crypto]==2.9.0
 python-dotenv==1.0.1
 
-# Data processing
 numpy==1.26.4
 requests==2.32.3
 
-# File processing
 PyPDF2==3.0.1
 python-docx==1.1.2
 Pillow==10.4.0
 python-multipart==0.0.9
 
-# Additional for performance
-tenacity==8.2.0
+tenacity==8.5.0
 pytest==8.3.3
